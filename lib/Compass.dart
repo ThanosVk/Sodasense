@@ -1,0 +1,242 @@
+import 'package:flutter/material.dart';
+import 'package:thesis/Sidemenu.dart';
+import 'package:flutter_compass/flutter_compass.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'dart:math' as math;
+import 'package:geolocator/geolocator.dart';
+import 'package:geocoding/geocoding.dart';
+import 'package:thesis/SqlDatabase.dart';
+import 'package:thesis/Navigation.dart';
+import 'dart:async';
+
+class Compass extends StatefulWidget {
+  const Compass({Key? key}) : super(key: key);
+
+  @override
+  _CompassState createState() => _CompassState();
+}
+
+class _CompassState extends State<Compass> {
+
+  bool hasPermissions = false, serviceEnabled = false;//hasPermissions if the gps permissions are given, serviceEnabled if the gps is enabled
+  double angle = 0,Altitude =0;//angle for getting the angles, Altitude for getting the altitude value from plugin
+  String Address = '-',adr = '-';//Address for getting the value from plugin, adr for printing the address
+  String location ='-', loc = '-';//location for getting the value from plugin, loc for printing the location
+  String alt = '-';//alt for printing the altitude
+  Timer ?timer;
+
+
+  @override
+  void initState() {
+    super.initState();
+    fetchPermissionStatus();
+    FlutterCompass.events?.listen(get_angle);
+
+    SqlDatabase.instance.database;
+
+    setState(() {
+      getData();
+    });
+
+    timer = Timer.periodic(Duration(seconds: 5), (Timer t) => insert_altitude_toDb());
+    //check();
+  }
+
+  //Function for checking if the app has the location permission
+  void fetchPermissionStatus() {
+    Permission.locationWhenInUse.status.then((status) {
+      if (mounted) {
+        setState(() => hasPermissions = status == PermissionStatus.granted);
+      }
+    });
+  }
+
+  //Function for getting the angles of compass
+  void get_angle(event) {
+    setState(() {
+      if(event.heading>0){
+        angle = event.heading;
+      }
+      else{
+        angle = event.heading + 360;
+      }
+    });
+  }
+
+  //Function for getting the status of Gps
+  Future<Position> getGeoLocationPosition() async {
+
+    serviceEnabled = await Geolocator.isLocationServiceEnabled();
+
+    return await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.best);
+  }
+
+  //Function for getting lat lng and
+  Future<void> GetAddressFromLatLong(Position position)async {
+    List<Placemark> placemarks = await placemarkFromCoordinates(position.latitude, position.longitude);
+    double alt_placemarks = await position.altitude;
+    print(placemarks);
+    Placemark place = placemarks[0];
+    setState(()  {
+      Address = '${place.street}, ${place.locality}, ${place.postalCode}, ${place.country}';
+    });
+  }
+
+  //Function for setting address and location
+  void getData() async {
+    Position position = await getGeoLocationPosition();
+    location ='Lat: ${position.latitude} , Long: ${position.longitude}';
+    Altitude = position.altitude;
+
+    print('$location');
+    GetAddressFromLatLong(position);
+  }
+
+  void insert_altitude_toDb() async{
+    await SqlDatabase.instance.insert_altitude(NavigationState().date,Altitude,0);
+    print('KOMPLE TO ALT');
+  }
+
+  void check() async{
+    List<Map> lista = await SqlDatabase.instance.select_altitude();
+    print(lista);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      drawer: Sidemenu(),
+      appBar: AppBar(
+        title:Text("Compass"),
+        actions: <Widget>[
+          IconButton(
+              alignment: Alignment.center,
+              icon: Icon(Icons.location_on_outlined),
+              onPressed: ()  =>
+              {
+                getData(),
+                if(serviceEnabled == true){
+                  setState(() {
+                    loc = location;
+                    adr = Address;
+                    alt = '$Altitude';
+                  }),
+                }
+                else{
+                  print(serviceEnabled),
+                  setState(() {
+                    loc ='Enable gps to get coordinates';
+                    adr ='Connect to internet to get Adrress';
+                    alt = 'Enable gps to get altitude';
+                  }),
+                }
+              }
+          )
+        ],
+      ),
+      body: SafeArea(
+        child: Center(
+          child: Builder(builder: (context) {
+            if(hasPermissions){
+              if(serviceEnabled){
+                loc = location;
+                adr = Address;
+                alt = '$Altitude';
+              }
+              else{
+                loc = 'Enable gps to get Location';
+                adr = 'Connect to internet to get Adrress';
+                alt = 'Enable gps to get altitude';
+              }
+              return Column(
+                children: <Widget>[
+                  Text('\n\n${angle.toStringAsFixed(0)}°'),
+                  Text('Adrress: ${adr}'),
+                  Text('${loc}'),
+                  Text('Altitude: ${alt}'),
+                  Expanded(child: _buildCompass()),
+                  //Build_Adrress(),
+                ],
+              );
+            }
+            else {
+              return buildPermissionSheet();
+            }
+          }),
+        ),
+      ),
+    );
+  }
+
+  //Widget for Compass
+  Widget _buildCompass() {
+    return StreamBuilder<CompassEvent>(
+      stream: FlutterCompass.events,
+      builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return Text('Error reading heading: ${snapshot.error}');
+        }
+
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Center(
+            child: CircularProgressIndicator(),
+          );
+        }
+
+        double? direction = snapshot.data!.heading;
+
+        // if direction is null, then device does not support this sensor
+        // show error message
+        if (direction == null)
+          return Center(
+            child: Text("Device does not have sensors !"),
+          );
+
+        return Material(
+          shape: CircleBorder(),
+          clipBehavior: Clip.antiAlias,
+          elevation: 4.0,
+          child: Container(
+            padding: EdgeInsets.all(16.0),
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+            ),
+            child: Transform.rotate(
+              angle: (direction * (math.pi / 180) * -1),
+              child: Image.asset('assets/compass.png'),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  //Widget for showing permissions menu
+  Widget buildPermissionSheet() {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Text('Location Permission Required'),
+          ElevatedButton(
+            child: Text('Request Permissions'),
+            onPressed: () {
+              Permission.locationWhenInUse.request().then((ignored) {
+                fetchPermissionStatus();
+              });
+            },
+          ),
+          SizedBox(height: 16),
+          ElevatedButton(
+            child: Text('Open App Settings'),
+            onPressed: () {
+              openAppSettings().then((opened) {
+              });
+            },
+          )
+        ],
+      ),
+    );
+  }
+}
