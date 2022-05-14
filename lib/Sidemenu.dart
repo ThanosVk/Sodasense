@@ -21,8 +21,8 @@ class Sidemenu extends StatelessWidget {
         padding: EdgeInsets.zero,
         children: [
           UserAccountsDrawerHeader(
-              accountName: Text('tns',style: TextStyle(color: Colors.white)),
-              accountEmail: Text('${box.get('email')}',style: TextStyle(color: Colors.white)),
+              accountName: Text('tns',style: TextStyle(color: Colors.black)),
+              accountEmail: Text('${box.get('email')}',style: TextStyle(color: Colors.black)),
             currentAccountPicture: CircleAvatar(
               child: ClipOval(
                 child: Image.asset('assets/user.png',
@@ -36,13 +36,13 @@ class Sidemenu extends StatelessWidget {
               color: Colors.cyan,
               image: DecorationImage(
                 fit: BoxFit.fill,
-                image: AssetImage('assets/landscape.png')
+                image: AssetImage('assets/background.png')
               ),
             ),
           ),
           ListTile(
             leading: Icon(Icons.home_outlined),
-            title: Text('Homepage'),
+            title: Text('Main screen'),
             onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => MyHomePage())),
           ),
           ListTile(

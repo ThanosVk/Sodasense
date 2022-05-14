@@ -134,7 +134,11 @@ class SqlDatabase{
     
     final db = await instance.database;
 
-    final result =  await db.rawQuery('SELECT lat,lng FROM coordinates');
+    final result =  await db.rawQuery('SELECT lat,lng FROM coordinates ORDER BY id DESC LIMIT 1000');
+
+    // final result = await db.transaction((txn) async {
+    //   await txn.rawQuery('SELECT lat,lng FROM coordinates ORDER BY id DESC LIMIT 1000');
+    // });
 
     //int? count = Sqflite.firstIntValue(await db.rawQuery('SELECT COUNT(*) FROM coordinates'));
 

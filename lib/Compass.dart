@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:hive/hive.dart';
 import 'package:thesis/Sidemenu.dart';
 import 'package:flutter_compass/flutter_compass.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -24,6 +25,8 @@ class _CompassState extends State<Compass> {
   String location ='-', loc = '-';//location for getting the value from plugin, loc for printing the location
   String alt = '-';//alt for printing the altitude
   Timer ?timer;
+  var box = Hive.box('user');
+  int art = 5;//art for altitude sampling rate
 
 
   @override
@@ -38,7 +41,11 @@ class _CompassState extends State<Compass> {
       getData();
     });
 
-    timer = Timer.periodic(Duration(seconds: 5), (Timer t) => insert_altitude_toDb());
+    if(box.get('altitude_sr')!=null){
+      art = box.get('altitude_sr');
+    }
+
+    timer = Timer.periodic(Duration(seconds: art), (Timer t) => insert_altitude_toDb());
     //check();
   }
 

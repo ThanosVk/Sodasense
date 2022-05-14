@@ -1,9 +1,13 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:internet_connection_checker/internet_connection_checker.dart';
 import 'package:pedometer/pedometer.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
+import 'package:thesis/Compass.dart';
+import 'package:thesis/Sensors.dart';
+import 'package:thesis/Settings.dart';
 import 'package:thesis/Sidemenu.dart';
 import 'package:thesis/Login.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
@@ -135,7 +139,7 @@ class MyApp extends StatelessWidget {
       }
 
       return MaterialApp(
-        title: 'Flutter Demo',
+        title: 'Sodasense',
         themeMode: themeProvider.themeMode,
         theme: MyThemes.lightTheme,
         darkTheme: MyThemes.darkTheme,
@@ -344,28 +348,19 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver{
   void onStepCount(StepCount event) {
     print(event);
     setState(() {
-      numsteps++;
-      sum_steps = box.get('today_steps') + numsteps;
-      box.put('today_steps',sum_steps);
+      if(box.get('today_steps')==null){
+        box.put('today_steps',0);
+      }
+      else{
+        //numsteps++;
+        //sum_steps = box.get('today_steps') + numsteps;
+        box.put('today_steps',box.get('today_steps') + 1);
+      }
     });
 
     box.put('date',date_once);
   }
 
-  void onPedestrianStatusChanged(PedestrianStatus event) {
-    print(event);
-    setState(() {
-      _status = event.status;
-    });
-  }
-
-  void onPedestrianStatusError(error) {
-    print('onPedestrianStatusError: $error');
-    setState(() {
-      _status = 'Pedestrian Status not available';
-    });
-    print(_status);
-  }
 
   void onStepCountError(error) {
     print('onStepCountError: $error');
@@ -443,6 +438,7 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver{
     return updateConnectionStatus(result);
   }
 
+  //Function for checking the availability of the internet
   Future<void> updateConnectionStatus(ConnectivityResult result) async {
     hasInternet = await InternetConnectionChecker().hasConnection;
     setState(() {
@@ -466,7 +462,7 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver{
     return Scaffold(
       drawer: Sidemenu(),
         appBar: AppBar(
-          title: const Text("Main Page")
+          title: const Text("Main screen")
         ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -685,6 +681,71 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver{
                     return buildPermissionSheet();
                   }
                 }),
+
+                SizedBox(height: size.height * 0.03),
+
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    Column(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        ElevatedButton(
+                            onPressed:() => {
+                              Navigator.push(context, MaterialPageRoute(builder: (context) => Navigation()))
+                            },
+                            child: Text('Navigation Screen')
+                        ),
+                      ]
+
+                    ),
+                    Column(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        ElevatedButton(
+                            onPressed:() => {
+                              Navigator.push(context, MaterialPageRoute(builder: (context) => Compass()))
+                            },
+                            child: Text('Compass Screen')
+                        ),
+                      ],
+                    ),
+
+
+
+                  ],
+                ),
+
+                SizedBox(height: size.height * 0.03),
+
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    Column(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          ElevatedButton(
+                              onPressed:() => {
+                                Navigator.push(context, MaterialPageRoute(builder: (context) => Sensors()))
+                              },
+                              child: Text('Sensors Screen')
+                          ),
+                        ]
+
+                    ),
+                    Column(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        ElevatedButton(
+                            onPressed:() => {
+                              Navigator.push(context, MaterialPageRoute(builder: (context) => Settings()))
+                            },
+                            child: Text('Settings Screen')
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ],
             )
           ),

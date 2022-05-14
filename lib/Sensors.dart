@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:hive/hive.dart';
 import 'package:thesis/Sidemenu.dart';
 import 'package:sensors_plus/sensors_plus.dart';
 import 'dart:async';
@@ -18,6 +19,7 @@ class Sensors extends StatefulWidget {
 
 class _SensorsState extends State<Sensors> {
 
+  int srt=10;//srt for sampling rate time of sensors
   double ax=0,ay=0,az=0,gx=0,gy=0,gz=0,mx=0, my=0, mz=0, pressure=0;//a for user accelerometer, g for gyroscope, m  for magnetometer, pressure for getting the value of pressure
   String amsg='',gmsg='',mmsg='',nmsg='', pmsg='Pressure not available'; //a for user accelerometer, g for gyroscope, m for magnetometer,n for proximity,p for pressure
   bool _isNear = false; //for proximity sensor
@@ -25,6 +27,7 @@ class _SensorsState extends State<Sensors> {
   //press_check for checking if the device has pressure sensor,prox_check for checking if the device has proximity sensor,acc_check for checking if
   //the device has accelerometer,gyro_check for checking if the device has gyroscope,magn_check for checking if the device has magnetometer
   bool press_check = false, prox_check = false, acc_check = false, gyro_check = false, magn_check = false;
+  var box = Hive.box('user');
 
   static const press_channel = MethodChannel('pressure_sensor');
   static const prox_channel = MethodChannel('proximity_channel');
@@ -120,7 +123,10 @@ class _SensorsState extends State<Sensors> {
       });
     });
 
-    timer = Timer.periodic(Duration(seconds: 10), (Timer t) {
+    if(box.get('sensors_sr')!=null){
+      srt = box.get('sensors_sr');
+    }
+    timer = Timer.periodic(Duration(seconds: srt), (Timer t) {
 
       if(acc_check == true){
         insert_acc_toDb();
