@@ -287,9 +287,6 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver{
     stepController.addListener(stepscount);
     heightController.addListener(heightcount);
 
-    if(steps != ''){
-      dist = (10000 * steps_length) / 1000;
-    }
     box.get('');
 
     initConnectivity();
@@ -355,6 +352,7 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver{
         //numsteps++;
         //sum_steps = box.get('today_steps') + numsteps;
         box.put('today_steps',box.get('today_steps') + 1);
+        dist = (box.get('today_steps') * box.get('steps_length'))/ 1000;
       }
     });
 

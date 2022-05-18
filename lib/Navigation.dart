@@ -217,6 +217,8 @@ class NavigationState extends State<Navigation> {
   getCoordinates() async{
     List<Map> lista = await SqlDatabase.instance.select_coor();
     //int ff = await SqlDatabase.instance.select_coor();
+    polylineCoordinates =[];
+    //print('I lista einai $polylineCoordinates');
     for(int i=0;i<lista.length;i++){
       polylineCoordinates.add(LatLng(lista[i]['lat'], lista[i]['lng']));
     }

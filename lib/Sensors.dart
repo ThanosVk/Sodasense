@@ -8,6 +8,7 @@ import 'package:flutter/foundation.dart' as foundation;
 import 'package:proximity_sensor/proximity_sensor.dart';
 import 'package:thesis/SqlDatabase.dart';
 import 'package:thesis/Navigation.dart';
+import 'package:thesis/main.dart';
 
 
 class Sensors extends StatefulWidget {
@@ -19,7 +20,7 @@ class Sensors extends StatefulWidget {
 
 class _SensorsState extends State<Sensors> {
 
-  int srt=10;//srt for sampling rate time of sensors
+  int srt=10, ttl_stps=0;//srt for sampling rate time of sensors, ttl_stps for getting the sum of the daily steps
   double ax=0,ay=0,az=0,gx=0,gy=0,gz=0,mx=0, my=0, mz=0, pressure=0;//a for user accelerometer, g for gyroscope, m  for magnetometer, pressure for getting the value of pressure
   String amsg='',gmsg='',mmsg='',nmsg='', pmsg='Pressure not available'; //a for user accelerometer, g for gyroscope, m for magnetometer,n for proximity,p for pressure
   bool _isNear = false; //for proximity sensor
@@ -146,6 +147,12 @@ class _SensorsState extends State<Sensors> {
       //check();
 
     });
+
+
+    setState(() {
+      get_steps();
+    });
+
 
   }
 
@@ -278,6 +285,12 @@ class _SensorsState extends State<Sensors> {
     print(lista);
   }
 
+  //function for showing the sum of the daily steps
+  get_steps() async{
+    List<Map> total_steps = await SqlDatabase.instance.sum_daily_steps();
+    ttl_stps = await total_steps[0]['SUM(steps)'];
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -297,7 +310,7 @@ class _SensorsState extends State<Sensors> {
                           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                           children: [
                             Text('Total count of steps', style: TextStyle(fontSize: 18.0,fontWeight: FontWeight.bold)),
-                            Text('-')
+                            ttl_stps == 0 ? Text('-') : Text('$ttl_stps')
                           ]
                       ),
                       Column(

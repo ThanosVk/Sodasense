@@ -230,6 +230,17 @@ class SqlDatabase{
     return result;
   }
 
+  Future sum_daily_steps() async{
+
+    final db = await instance.database;
+
+    final result =  await db.rawQuery('SELECT SUM(steps) FROM daily_steps');
+
+    //int? count = Sqflite.firstIntValue(await db.rawQuery('SELECT COUNT(*) FROM coordinates'));
+
+
+    return result;
+  }
 
   Future close() async {
     final db = await instance.database;
