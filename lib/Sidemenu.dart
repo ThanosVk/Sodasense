@@ -79,7 +79,7 @@ class Sidemenu extends StatelessWidget {
                     Navigator.pop(context)
                   },child: Text('No')),
                   ElevatedButton(onPressed: () async {
-                    StartScreen().stopForegroundTask();
+                    await StartScreen().stopForegroundTask();
                     //await LoginState().db.close();
                     var box = Hive.box('user');
                     box.delete('email');

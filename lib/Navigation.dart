@@ -226,9 +226,9 @@ class NavigationState extends State<Navigation> {
 
   void insert_toDb() async{
     if(lat!=0.0 && lng!=0.0){
-      await SqlDatabase.instance.insert_coor(date,lat,lng,0);
+      await SqlDatabase.instance.insert_coor("'$date'",lat,lng,0);
     }
-    //print('has inserted somethinggggggggggggggggg');
+    // print('has inserted somethinggggggggggggggggg');
   }
 
 

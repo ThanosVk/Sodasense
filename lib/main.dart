@@ -411,7 +411,7 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver{
 
   insert_toDb() async{
     int stp = box.get('today_steps');
-    await SqlDatabase.instance.insert_daily_steps(date,stp,0);
+    await SqlDatabase.instance.insert_daily_steps("'$date'",stp,0);
     List<Map> lista = await SqlDatabase.instance.select_daily_steps();
     print(lista);
   }

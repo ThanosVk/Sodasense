@@ -100,7 +100,7 @@ class _CompassState extends State<Compass> {
   }
 
   void insert_altitude_toDb() async{
-    await SqlDatabase.instance.insert_altitude(NavigationState().date,Altitude,0);
+    await SqlDatabase.instance.insert_altitude("'${NavigationState().date}'",Altitude,0);
     print('KOMPLE TO ALT');
   }
 

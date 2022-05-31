@@ -186,6 +186,7 @@ class _SensorsState extends State<Sensors> {
         else{
           nmsg = 'Proximity not available';
         }
+        print(nmsg);
       });
     });
   }
@@ -252,31 +253,31 @@ class _SensorsState extends State<Sensors> {
 
   //function for inserting to the database the pressure data
   void insert_pressure_toDb() async{
-    await SqlDatabase.instance.insert_pressure(NavigationState().date,pressure,0);
+    await SqlDatabase.instance.insert_pressure("'${NavigationState().date}'",pressure,0);
     //print('KOMPLE TO PRESS');
   }
 
   //function for inserting to the database the acceleration data
   void insert_acc_toDb() async{
-    await SqlDatabase.instance.insert_acc(NavigationState().date, ax, ay, az, 0);
+    await SqlDatabase.instance.insert_acc("'${NavigationState().date}'", ax, ay, az, 0);
     //print('KOMPLE TO ACC');
   }
 
   //function for inserting to the database the gyroscope data
   void insert_gyro_toDb() async{
-    await SqlDatabase.instance.insert_gyro(NavigationState().date, gx, gy, gz, 0);
+    await SqlDatabase.instance.insert_gyro("'${NavigationState().date}'", gx, gy, gz, 0);
     //print('KOMPLE TO GYRO');
   }
 
   //function for inserting to the database the magnetometer data
   void insert_magn_toDb() async{
-    await SqlDatabase.instance.insert_magn(NavigationState().date,mx,my,mz,0);
+    await SqlDatabase.instance.insert_magn("'${NavigationState().date}'",mx,my,mz,0);
     //print('KOMPLE TO MAGN');
   }
 
   //function for inserting to the database the proximity data
   void insert_prox_toDb() async{
-    await SqlDatabase.instance.insert_prox(NavigationState().date, "$nmsg", 0);
+    await SqlDatabase.instance.insert_prox("'${NavigationState().date}'", "$nmsg", 0);
     //print('KOMPLE TO PROX');
   }
 

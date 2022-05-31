@@ -1,6 +1,9 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:hive/hive.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:sqflite/sqflite.dart';
 import 'package:thesis/Sidemenu.dart';
 import 'package:provider/provider.dart';
 import 'package:thesis/Theme_provider.dart';
@@ -175,6 +178,44 @@ class _SettingsState extends State<Settings> {
                 ),
               ),
             ),
+        Card(
+          shadowColor: Colors.grey,
+          elevation: 10,
+          clipBehavior: Clip.antiAlias,
+          margin: EdgeInsets.only(left: 10, right: 10,bottom: 10,top: 10),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(40),
+          ),
+          child: ListTile(
+            title: Text('Copy DB'),
+            onTap: () async {
+              final dbFolder = await getDatabasesPath();
+              File source1 = File('$dbFolder/db.db');
+
+              Directory copyTo = Directory("/storage/self/primary/Download");
+              if ((await copyTo.exists())) {
+                // print("Path exist");
+                // var status = await Permission.storage.status;
+                // if (!status.isGranted) {
+                //   await Permission.storage.request();
+                // }
+              } else {
+                print("not exist");
+                // if (await Permission.storage.request().isGranted) {
+                // Either the permission was already granted before or the user just granted it.
+                await copyTo.create();
+                // } else {
+                //   print('Please give permission');
+                // }
+              }
+
+              String newPath = "${copyTo.path}/db.db";
+              await source1.copy(newPath);
+
+              Fluttertoast.showToast(msg: 'Successfully Copied DB', toastLength: Toast.LENGTH_SHORT,gravity: ToastGravity.BOTTOM);
+            },
+          ),
+        )
           ],
         ),
       ),
