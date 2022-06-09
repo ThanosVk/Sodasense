@@ -1,5 +1,7 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:hive/hive.dart';
 import 'package:thesis/Sidemenu.dart';
 import 'package:sensors_plus/sensors_plus.dart';
@@ -9,6 +11,7 @@ import 'package:proximity_sensor/proximity_sensor.dart';
 import 'package:thesis/SqlDatabase.dart';
 import 'package:thesis/Navigation.dart';
 import 'package:thesis/main.dart';
+import 'dart:io';
 
 
 class Sensors extends StatefulWidget {
@@ -29,6 +32,7 @@ class _SensorsState extends State<Sensors> {
   //the device has accelerometer,gyro_check for checking if the device has gyroscope,magn_check for checking if the device has magnetometer
   bool press_check = false, prox_check = false, acc_check = false, gyro_check = false, magn_check = false;
   var box = Hive.box('user');
+  var color;//color for setting the color of the icons on dark and light theme
 
   static const press_channel = MethodChannel('pressure_sensor');
   static const prox_channel = MethodChannel('proximity_channel');
@@ -152,8 +156,6 @@ class _SensorsState extends State<Sensors> {
     setState(() {
       get_steps();
     });
-
-
   }
 
 
@@ -205,6 +207,9 @@ class _SensorsState extends State<Sensors> {
 
   //Future for checking the availability of proximity sensor
   Future<void> check_proximity_availability() async {
+    if(Platform.isIOS){
+      prox_check = true;
+    }
     try {
       var available = await prox_channel.invokeMethod('isSensorAvailable');
       setState(() {
@@ -217,6 +222,9 @@ class _SensorsState extends State<Sensors> {
 
   //Future for checking the availability of accelerometer sensor
   Future<void> check_acc_availability() async {
+    if(Platform.isIOS){
+      acc_check = true;
+    }
     try {
       var available = await acc_channel.invokeMethod('isSensorAvailable');
       setState(() {
@@ -229,6 +237,9 @@ class _SensorsState extends State<Sensors> {
 
   //Future for checking the availability of gyroscope sensor
   Future<void> check_gyro_availability() async {
+    if(Platform.isIOS){
+      gyro_check = true;
+    }
     try {
       var available = await gyro_channel.invokeMethod('isSensorAvailable');
       setState(() {
@@ -241,6 +252,9 @@ class _SensorsState extends State<Sensors> {
 
   //Future for checking the availability of magnetometer
   Future<void> check_magn_availability() async {
+    if(Platform.isIOS){
+      magn_check = true;
+    }
     try {
       var available = await magn_channel.invokeMethod('isSensorAvailable');
       setState(() {
@@ -301,68 +315,187 @@ class _SensorsState extends State<Sensors> {
         ),
         body: SafeArea(
           child:Center(
-           child: Column(
-               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-               children: [
-                 Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      Column(
-                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                          children: [
-                            Text('Total count of steps', style: TextStyle(fontSize: 18.0,fontWeight: FontWeight.bold)),
-                            ttl_stps == 0 ? Text('-') : Text('$ttl_stps')
-                          ]
-                      ),
-                      Column(
-                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                          children: [
-                            Text('Pressure', style: TextStyle(fontSize: 18.0,fontWeight: FontWeight.bold)),
-                            Text(pmsg)
-                          ]
-                      )
-                    ]
+            child: ListView(
+              children: [
+                ListTile(
+                  leading: RotatedBox(
+                    quarterTurns: 3,
+                    child: FaIcon(FontAwesomeIcons.shoePrints)
                   ),
-                 Row(
-                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                     children: [
-                       Column(
-                           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                           children: [
-                             Text('Accelerometer', style: TextStyle(fontSize: 18.0,fontWeight: FontWeight.bold)),
-                             Text(amsg)
-                           ]
-                       ),
-                       Column(
-                           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                           children: [
-                             Text('Gyroscope', style: TextStyle(fontSize: 18.0,fontWeight: FontWeight.bold)),
-                             Text(gmsg)
-                           ]
-                       )
-                     ]
-                 ),
-                 Row(
-                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                     children: [
-                       Column(
-                           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                           children: [
-                             Text('Magnetometer', style: TextStyle(fontSize: 18.0,fontWeight: FontWeight.bold)),
-                             Text(mmsg)
-                           ]
-                       ),
-                       Column(
-                           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                           children: [
-                             Text('Is anything near?', style: TextStyle(fontSize: 18.0,fontWeight: FontWeight.bold)),
-                             Text('$nmsg')
-                           ]
-                       )
-                     ]
-                 ),
-               ],
-             )
+                  title: Text('Total count of steps', style: TextStyle(fontSize: 18.0,fontWeight: FontWeight.bold)),
+                  trailing: ttl_stps == 0 ? Text('-') : Text('$ttl_stps'),
+                ),
+                ListTile(
+                  leading: FaIcon(FontAwesomeIcons.tachometerAlt),
+                  title: Text('Pressure', style: TextStyle(fontSize: 18.0,fontWeight: FontWeight.bold)),
+                  trailing: Text(pmsg),
+                ),
+                ListTile(
+                  leading: Icon(FontAwesomeIcons.arrowsAlt),
+                  title: Text('Accelerometer', style: TextStyle(fontSize: 18.0,fontWeight: FontWeight.bold)),
+                  trailing: Text(amsg),
+                ),
+                ListTile(
+                  leading: Icon(CupertinoIcons.arrow_2_circlepath),
+                  title: Text('Gyroscope', style: TextStyle(fontSize: 18.0,fontWeight: FontWeight.bold)),
+                  trailing: Text(gmsg),
+                ),
+                ListTile(
+                  leading: FaIcon(FontAwesomeIcons.compass),
+                  title: Text('Magnetometer', style: TextStyle(fontSize: 18.0,fontWeight: FontWeight.bold)),
+                  trailing: Text(mmsg),
+                ),
+                ListTile(
+                  leading: Icon(Icons.sensors_outlined),
+                  title: Text('Is anything near?', style: TextStyle(fontSize: 18.0,fontWeight: FontWeight.bold)),
+                  trailing: Text('${nmsg.replaceAll("'","")}'),
+                ),
+              ],
+            ),
+           // child: Column(
+           //     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+           //     children: [
+           //       // ListView(
+           //       //   children: [
+           //       //     Container(
+           //       //       width: 30,
+           //       //       height: 25,
+           //       //       child: Text('Total count of steps', style: TextStyle(fontSize: 18.0,fontWeight: FontWeight.bold)),
+           //       //     ),
+           //       //     Container(
+           //       //       width: 30,
+           //       //       height: 25,
+           //       //       child: ttl_stps == 0 ? Text('-') : Text('$ttl_stps'),
+           //       //     )
+           //       //   ],
+           //       // ),
+           //       // Row(
+           //       //     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+           //       //     children: [
+           //       //       Column(
+           //       //           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+           //       //           children: [
+           //       //             Text('Total count of steps', style: TextStyle(fontSize: 18.0,fontWeight: FontWeight.bold)),
+           //       //           ]
+           //       //       ),
+           //       //       Column(
+           //       //           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+           //       //           children: [
+           //       //             ttl_stps == 0 ? Text('-') : Text('$ttl_stps')
+           //       //           ]
+           //       //       )
+           //       //     ]
+           //       // ),
+           //       // Row(
+           //       //     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+           //       //     children: [
+           //       //       Column(
+           //       //           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+           //       //           children: [
+           //       //             Text('Pressure', style: TextStyle(fontSize: 18.0,fontWeight: FontWeight.bold)),
+           //       //           ]
+           //       //       ),
+           //       //       Column(
+           //       //           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+           //       //           children: [
+           //       //             Text(pmsg)
+           //       //           ]
+           //       //       )
+           //       //     ]
+           //       // ),
+           //       // Row(
+           //       //     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+           //       //     children: [
+           //       //       Column(
+           //       //           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+           //       //           children: [
+           //       //             Text('Total count of steps', style: TextStyle(fontSize: 18.0,fontWeight: FontWeight.bold)),
+           //       //           ]
+           //       //       ),
+           //       //       Column(
+           //       //           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+           //       //           children: [
+           //       //             ttl_stps == 0 ? Text('-') : Text('$ttl_stps')
+           //       //           ]
+           //       //       )
+           //       //     ]
+           //       // ),
+           //       // Row(
+           //       //     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+           //       //     children: [
+           //       //       Column(
+           //       //           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+           //       //           children: [
+           //       //             Text('Total count of steps', style: TextStyle(fontSize: 18.0,fontWeight: FontWeight.bold)),
+           //       //           ]
+           //       //       ),
+           //       //       Column(
+           //       //           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+           //       //           children: [
+           //       //             ttl_stps == 0 ? Text('-') : Text('$ttl_stps')
+           //       //           ]
+           //       //       )
+           //       //     ]
+           //       // ),
+           //       Row(
+           //          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+           //          children: [
+           //            Column(
+           //                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+           //                children: [
+           //                  Text('Total count of steps', style: TextStyle(fontSize: 18.0,fontWeight: FontWeight.bold)),
+           //                  ttl_stps == 0 ? Text('-') : Text('$ttl_stps')
+           //                ]
+           //            ),
+           //            Column(
+           //                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+           //                children: [
+           //                  Text('Pressure', style: TextStyle(fontSize: 18.0,fontWeight: FontWeight.bold)),
+           //                  Text(pmsg)
+           //                ]
+           //            )
+           //          ]
+           //        ),
+           //       Row(
+           //           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+           //           children: [
+           //             Column(
+           //                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+           //                 children: [
+           //                   Text('Accelerometer', style: TextStyle(fontSize: 18.0,fontWeight: FontWeight.bold)),
+           //                   Text(amsg)
+           //                 ]
+           //             ),
+           //             Column(
+           //                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+           //                 children: [
+           //                   Text('Gyroscope', style: TextStyle(fontSize: 18.0,fontWeight: FontWeight.bold)),
+           //                   Text(gmsg)
+           //                 ]
+           //             )
+           //           ]
+           //       ),
+           //       Row(
+           //           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+           //           children: [
+           //             Column(
+           //                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+           //                 children: [
+           //                   Text('Magnetometer', style: TextStyle(fontSize: 18.0,fontWeight: FontWeight.bold)),
+           //                   Text(mmsg)
+           //                 ]
+           //             ),
+           //             Column(
+           //                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+           //                 children: [
+           //                   Text('Is anything near?', style: TextStyle(fontSize: 18.0,fontWeight: FontWeight.bold)),
+           //                   Text('${nmsg.replaceAll("'","")}')
+           //                 ]
+           //             )
+           //           ]
+           //       ),
+           //     ],
+           //   )
           ),
         ),
     );

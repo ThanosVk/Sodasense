@@ -352,7 +352,7 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver{
         //numsteps++;
         //sum_steps = box.get('today_steps') + numsteps;
         box.put('today_steps',box.get('today_steps') + 1);
-        dist = (box.get('today_steps') * box.get('steps_length'))/ 1000;
+        dist = double.parse(((box.get('today_steps') * box.get('steps_length'))/ 1000).toStringAsFixed(3));//(box.get('today_steps') * box.get('steps_length'))/ 1000;
       }
     });
 
@@ -467,14 +467,14 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver{
           child: (
             Column(
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children:[
-                      Text('Welcome back!', style: TextStyle(fontSize: 18.0,fontWeight: FontWeight.bold))
-                    ]
-                ),
+                // Row(
+                //   mainAxisAlignment: MainAxisAlignment.spaceAround,
+                //     children:[
+                //       Text('Welcome back!', style: TextStyle(fontSize: 18.0,fontWeight: FontWeight.bold))
+                //     ]
+                // ),
 
-                SizedBox(height: size.height * 0.05),
+                SizedBox(height: size.height * 0.03),
 
                 Builder(builder: (context){
                   if(hasPermissions){
@@ -689,10 +689,30 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver{
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: [
                         ElevatedButton(
-                            onPressed:() => {
-                              Navigator.push(context, MaterialPageRoute(builder: (context) => Navigation()))
-                            },
-                            child: Text('Navigation Screen')
+                          style: ElevatedButton.styleFrom(
+                            minimumSize: const Size(125,35),
+                            maximumSize: const Size(125,35),
+                          ),
+                          onPressed:() => {
+                            Navigator.push(context, MaterialPageRoute(builder: (context) => Navigation()))
+                          },
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text('Route'),
+                              SizedBox(
+                                width: 5,
+                              ),
+                              Icon(
+                                Icons.location_on_outlined,
+                                size: 24.0,
+                              ),
+                            ],
+                          ),
+                          // style: ElevatedButton.styleFrom(
+                          //   minimumSize: ,
+                          //   maximumSize: ,
+                          // ),
                         ),
                       ]
 
@@ -701,16 +721,29 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver{
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: [
                         ElevatedButton(
-                            onPressed:() => {
-                              Navigator.push(context, MaterialPageRoute(builder: (context) => Compass()))
-                            },
-                            child: Text('Compass Screen')
+                          style: ElevatedButton.styleFrom(
+                            minimumSize: const Size(125,35),
+                            maximumSize: const Size(125,35),
+                          ),
+                          onPressed:() => {
+                            Navigator.push(context, MaterialPageRoute(builder: (context) => Compass()))
+                          },
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text('Compass'),
+                              SizedBox(
+                                width: 5,
+                              ),
+                              Icon(
+                                Icons.explore_outlined,
+                                size: 24.0,
+                              ),
+                            ],
+                          )
                         ),
                       ],
                     ),
-
-
-
                   ],
                 ),
 
@@ -723,10 +756,26 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver{
                         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                         children: [
                           ElevatedButton(
-                              onPressed:() => {
-                                Navigator.push(context, MaterialPageRoute(builder: (context) => Sensors()))
-                              },
-                              child: Text('Sensors Screen')
+                            style: ElevatedButton.styleFrom(
+                              minimumSize: const Size(125,35),
+                              maximumSize: const Size(125,35),
+                            ),
+                            onPressed:() => {
+                              Navigator.push(context, MaterialPageRoute(builder: (context) => Sensors()))
+                            },
+                            child:Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text('Sensors'),
+                                SizedBox(
+                                  width: 5,
+                                ),
+                                Icon(
+                                  Icons.sensors_outlined,
+                                  size: 24.0,
+                                ),
+                              ],
+                            )
                           ),
                         ]
 
@@ -735,12 +784,83 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver{
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: [
                         ElevatedButton(
-                            onPressed:() => {
-                              Navigator.push(context, MaterialPageRoute(builder: (context) => Settings()))
-                            },
-                            child: Text('Settings Screen')
+                          style: ElevatedButton.styleFrom(
+                            minimumSize: const Size(125,35),
+                            maximumSize: const Size(125,35),
+                          ),
+                          onPressed: () => {
+                            Navigator.push(context, MaterialPageRoute(builder: (context) => Settings()))
+                          },
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text('Settings'),
+                              SizedBox(
+                                width: 5,
+                              ),
+                              Icon(
+                                Icons.settings,
+                                size: 24.0,
+                              ),
+                            ],
+                          )
                         ),
                       ],
+                    ),
+                  ],
+                ),
+
+                SizedBox(height: size.height * 0.03),
+
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    Column(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              minimumSize: const Size(125,35),
+                              maximumSize: const Size(125,35),
+                            ),
+                            onPressed:() => {
+                              showDialog(context: context, builder: (context) => AlertDialog(
+                                title: Text('Logout'),
+                                content: Text('Are you sure you want to exit?'),
+                                actions: [
+                                  ElevatedButton(onPressed: () => {
+                                    Navigator.pop(context)
+                                  },child: Text('No')),
+                                  ElevatedButton(onPressed: () async {
+                                    await StartScreen().stopForegroundTask();
+                                    //await LoginState().db.close();
+                                    var box = Hive.box('user');
+                                    box.delete('email');
+                                    box.delete('pass');
+                                    Navigator.push(context, MaterialPageRoute(builder: (context) => Login()));
+                                  }, child: Text('Yes'))
+                                ],
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.0)),
+                              ),
+                                barrierDismissible: false,
+                              ),
+                            },
+                            child:Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text('Logout'),
+                                SizedBox(
+                                  width: 5,
+                                ),
+                                Icon(
+                                  Icons.logout,
+                                  size: 24.0,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ]
+
                     ),
                   ],
                 ),

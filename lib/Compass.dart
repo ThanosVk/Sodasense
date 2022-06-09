@@ -25,7 +25,7 @@ class _CompassState extends State<Compass> {
   String location ='-', loc = '-';//location for getting the value from plugin, loc for printing the location
   String alt = '-';//alt for printing the altitude
   Timer ?timer;
-  var box = Hive.box('user');
+  var box = Hive.box('user'),lat, lng;
   int art = 5;//art for altitude sampling rate
 
 
@@ -92,7 +92,9 @@ class _CompassState extends State<Compass> {
   //Function for setting address and location
   void getData() async {
     Position position = await getGeoLocationPosition();
-    location ='Lat: ${position.latitude} , Long: ${position.longitude}';
+    lat=position.latitude;
+    lng=position.longitude;
+    //location ='Lat: ${(position.latitude).toStringAsFixed(4)} , Long: ${(position.longitude).toStringAsFixed(4)}';
     Altitude = position.altitude;
 
     print('$location');
@@ -111,6 +113,9 @@ class _CompassState extends State<Compass> {
 
   @override
   Widget build(BuildContext context) {
+
+    Size size = MediaQuery.of(context).size;
+
     return Scaffold(
       drawer: Sidemenu(),
       appBar: AppBar(
@@ -124,7 +129,7 @@ class _CompassState extends State<Compass> {
                 getData(),
                 if(serviceEnabled == true){
                   setState(() {
-                    loc = location;
+                    // loc = location;
                     adr = Address;
                     alt = '$Altitude';
                   }),
@@ -157,11 +162,47 @@ class _CompassState extends State<Compass> {
               }
               return Column(
                 children: <Widget>[
+                  SizedBox(height: size.height * 0.05),
+                  buildCompass(),
                   Text('\n\n${angle.toStringAsFixed(0)}°'),
-                  Text('Adrress: ${adr}'),
-                  Text('${loc}'),
-                  Text('Altitude: ${alt}'),
-                  Expanded(child: _buildCompass()),
+                  RichText(
+                    text: TextSpan(
+                        style: const TextStyle(
+                          color: Colors.black,
+                        ),
+                      children: <TextSpan>[
+                        TextSpan(text: 'Adrress: ',style: const TextStyle(fontWeight: FontWeight.bold)),
+                        TextSpan(text: '$adr'),
+                      ]
+                    ),
+                  ),
+                  RichText(
+                    text: TextSpan(
+                        style: const TextStyle(
+                          color: Colors.black,
+                        ),
+                        children: serviceEnabled==true  ? [
+                          TextSpan(text: 'Lat: ',style: const TextStyle(fontWeight: FontWeight.bold)),
+                          TextSpan(text: '${lat.toStringAsFixed(4)},'),
+                          TextSpan(text: ' Lon: ',style: const TextStyle(fontWeight: FontWeight.bold)),
+                          TextSpan(text: '${lng.toStringAsFixed(4)}'),
+                        ]
+                        : [
+                          TextSpan(text: '$loc')
+                        ]
+                    ),
+                  ),
+                  RichText(
+                    text: TextSpan(
+                        style: const TextStyle(
+                          color: Colors.black,
+                        ),
+                        children: <TextSpan>[
+                          TextSpan(text: 'Altitude: ',style: const TextStyle(fontWeight: FontWeight.bold)),
+                          TextSpan(text: '$alt'),
+                        ]
+                    ),
+                  ),
                   //Build_Adrress(),
                 ],
               );
@@ -176,7 +217,7 @@ class _CompassState extends State<Compass> {
   }
 
   //Widget for Compass
-  Widget _buildCompass() {
+  Widget buildCompass() {
     return StreamBuilder<CompassEvent>(
       stream: FlutterCompass.events,
       builder: (context, snapshot) {

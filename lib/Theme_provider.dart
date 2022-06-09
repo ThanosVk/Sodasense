@@ -35,6 +35,9 @@ class MyThemes {
     cardTheme: CardTheme(
       color: Colors.grey.shade900
     ),
+    listTileTheme: ListTileThemeData(
+      iconColor: Colors.white
+    )
   );
 
   static final lightTheme = ThemeData(
@@ -49,5 +52,8 @@ class MyThemes {
     ),
     primaryColor: Colors.cyan,
     // iconTheme: IconThemeData(color: Colors.black),
+    listTileTheme: ListTileThemeData(
+      iconColor: Colors.black
+    )
   );
 }

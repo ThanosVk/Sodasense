@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:thesis/Sidemenu.dart';
@@ -15,6 +16,7 @@ import 'package:intl/intl.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:hive/hive.dart';
 import 'package:thesis/SqlDatabase.dart';
+import 'package:flutter/services.dart';
 
 class CachedTileProvider extends TileProvider {
   const CachedTileProvider({customCacheManager});
@@ -332,16 +334,24 @@ class NavigationState extends State<Navigation> {
                     Positioned(
                       right: 20,
                       bottom: 20,
-                      child: FloatingActionButton(
-                        onPressed: (){
-                          setState(() {
-                            center_on_location_update = CenterOnLocationUpdate.always;
-                          });
-                          center_current_location_StreamController.add(18);
+                      child: InkWell(
+                        onLongPress: (){
+                          // print('MEGALLOOOOOO');
+                          Clipboard.setData(ClipboardData(text: "${lat},${lng}"));
+                          Fluttertoast.showToast(msg: 'The coordinates are: X:$lat, Y:$lng and copied to clipboard', toastLength: Toast.LENGTH_LONG,gravity: ToastGravity.BOTTOM);
                         },
-                        child: Icon(
-                          Icons.my_location,
-                          color: Colors.white,
+                        child: FloatingActionButton(
+                          onPressed: (){
+                            setState(() {
+                              center_on_location_update = CenterOnLocationUpdate.always;
+                            });
+                            center_current_location_StreamController.add(18);
+                            // print('mikroooo');
+                          },
+                          child: Icon(
+                            Icons.my_location,
+                            color: Colors.white,
+                          ),
                         ),
                       ),
                     ),
@@ -369,18 +379,18 @@ class NavigationState extends State<Navigation> {
                     //     ),
                     //   ),
                     // ),
-                    Positioned(
-                      left:10,
-                      top: 10,
-                      child: Card(
-                        child: Padding(
-                          padding: const EdgeInsets.all(8.0),
-                          child: Text(
-                            '$date_show\nX:${lat}, Y:${lng}'
-                          ),
-                        ),
-                      ),
-                    ),
+                    // Positioned(
+                    //   left:10,
+                    //   top: 10,
+                    //   child: Card(
+                    //     child: Padding(
+                    //       padding: const EdgeInsets.all(8.0),
+                    //       child: Text(
+                    //         '$date_show\nX:${lat}, Y:${lng}'
+                    //       ),
+                    //     ),
+                    //   ),
+                    // ),
                     Padding(
                       padding: EdgeInsets.symmetric(horizontal: 16, vertical: 34),
                       child: Column(
