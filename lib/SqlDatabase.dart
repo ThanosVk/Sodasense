@@ -130,11 +130,11 @@ class SqlDatabase{
 
   }
 
-  Future select_coor() async{
+  Future select_coor(int x, String dt_st, String dt_ed) async{
     
     final db = await instance.database;
 
-    final result =  await db.rawQuery('SELECT lat,lng FROM coordinates ORDER BY id DESC LIMIT 1000');
+    final result =  await db.rawQuery('SELECT lat,lng FROM coordinates ORDER BY id DESC LIMIT $x');
 
     // final result = await db.transaction((txn) async {
     //   await txn.rawQuery('SELECT lat,lng FROM coordinates ORDER BY id DESC LIMIT 1000');

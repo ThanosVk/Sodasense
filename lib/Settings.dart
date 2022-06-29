@@ -7,6 +7,7 @@ import 'package:sqflite/sqflite.dart';
 import 'package:thesis/Sidemenu.dart';
 import 'package:provider/provider.dart';
 import 'package:thesis/Theme_provider.dart';
+import 'package:thesis/main.dart';
 
 class Settings extends StatefulWidget {
   const Settings({Key? key}) : super(key: key);
@@ -17,9 +18,16 @@ class Settings extends StatefulWidget {
 
 class _SettingsState extends State<Settings> {
 
+  final stepController = TextEditingController(),heightController = TextEditingController();//stepController for getting steps target, heightController for getting height
   final sensors_contr = TextEditingController(),alt_contr = TextEditingController();//sensors_contr for getting sampling rate of sensors, alt_contr for getting sampling rate of altitude
   int sensors_count=0 ,alt_count=0;//sensors_count for getting the value of sensors_contr, alt_count for getting the value of alt_contr
+  //steps_count for getting the value of stepController, steps_target for getting the value of textfield, height _count for getting the value of height Controller
+  //height for getting the value from heightController Textfield
+  int steps_count=0 ,steps_target=0, height_count=0,height=0;
+  double steps_length=0,dist=0;//steps_length for finding the exact meters per user height,dist for distance in km
   String sensors_value = '',alt_value = '';//sensors_value for getting value from sensors listener,alt_value for getting value from altitude listener
+  bool height_validate=true, height_check=false;// height_validate for height validate textfield, height_check to know if height Textfield contains something
+  late List<bool> isSelected = [true, false];//isSelected for gender toggle buttons
   var box = Hive.box('user');
 
 
@@ -30,6 +38,10 @@ class _SettingsState extends State<Settings> {
     //Start listening to changes with listeners
     sensors_contr.addListener(sensorsvalue);
     alt_contr.addListener(altvalue);
+
+    //Start listening to values with listener
+    stepController.addListener(stepscount);
+    heightController.addListener(heightcount);
   }
 
   @override
@@ -38,6 +50,8 @@ class _SettingsState extends State<Settings> {
     //and removes the values of both listeners
     sensors_contr.dispose();
     alt_contr.dispose();
+    stepController.dispose();
+    heightController.dispose();
     super.dispose();
   }
 
@@ -49,6 +63,48 @@ class _SettingsState extends State<Settings> {
   //Function for getting string from altitude controller
   String altvalue(){
     return alt_value;
+  }
+
+  //For getting steps from stepController
+  int stepscount(){
+    return steps_count;
+  }
+
+  //For getting height from heightController
+  int heightcount(){
+    return height_count;
+  }
+
+  //Function for displaying the correct error message on height textfield
+  String? Height_Textfield_check(){
+    String height_msg='';
+    if(heightController.text.isEmpty==true){
+      height_msg='Height can\'t be empty';
+      print(height_msg);
+      height_check=false;
+      return height_msg;
+    }
+    else if(int.parse(heightController.text) > 250){
+      height_msg='Height must be less than 250cm';
+      print(height_msg);
+      height_check=false;
+      return height_msg;
+    }
+    else if(int.parse(heightController.text) <= 250){
+      height_check =true;
+      height_msg='Valid height';
+      print(height_msg);
+    }
+  }
+
+  //Function for testing if height textfield is changed for the first time
+  bool height_error_msg(){
+    if(Height_Textfield_check()?.isNotEmpty==true){
+      return false;
+    }
+    else{
+      return true;
+    }
   }
 
   @override
@@ -178,44 +234,161 @@ class _SettingsState extends State<Settings> {
                 ),
               ),
             ),
-        Card(
-          shadowColor: Colors.grey,
-          elevation: 10,
-          clipBehavior: Clip.antiAlias,
-          margin: EdgeInsets.only(left: 10, right: 10,bottom: 10,top: 10),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(40),
-          ),
-          child: ListTile(
-            title: Text('Copy DB'),
-            onTap: () async {
-              final dbFolder = await getDatabasesPath();
-              File source1 = File('$dbFolder/db.db');
+            Card(
+              shadowColor: Colors.grey,
+              elevation: 10,
+              clipBehavior: Clip.antiAlias,
+              margin: EdgeInsets.only(left: 10, right: 10, bottom: 10, top: 10),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(40)
+              ),
+              child: ListTile(
+                title: Text('Change steps, height and gender'),
+                onTap: () => showDialog(context: context, builder: (context) => StatefulBuilder(
+                    builder: (BuildContext context, StateSetter setState) {
+                      return AlertDialog(
+                        title: Text('Set your daily steps target, your gender and your height',
+                            textAlign: TextAlign.justify
+                        ),
+                        content: SizedBox(
+                          child: SingleChildScrollView(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text('You can change the daily target of steps anytime or the height by pressing the settings icon on top right corner.',
+                                  style: TextStyle(
+                                      fontSize: 14
+                                  ),
+                                  textAlign: TextAlign.justify,
+                                ),
+                                TextField(
+                                  maxLength: 5,
+                                  controller: stepController,
+                                  decoration: InputDecoration(
+                                      labelText: "Steps Target",
+                                      counterText: ''
+                                  ),
+                                  keyboardType: TextInputType.number,
+                                ),
+                                TextField(
+                                  maxLength: 3,
+                                  controller: heightController,
+                                  decoration: InputDecoration(
+                                      labelText: "Height in cm",
+                                      errorText: height_validate ? null: Height_Textfield_check(),
+                                      counterText: ''
+                                  ),
+                                  keyboardType: TextInputType.number,
+                                  onChanged: (text) => setState(() {
+                                    height_validate = height_error_msg();
+                                  }),
+                                ),
+                                SizedBox(height: 16),
+                                ToggleButtons(
+                                  isSelected: isSelected,
+                                  borderRadius: BorderRadius.circular(30),
+                                  color: Colors.black,
+                                  children: <Widget>[
+                                    Text('Male'),
+                                    Text('Female')
+                                  ],
+                                  onPressed: (int index) {
+                                    setState(() {
+                                      //final box = Boxes.getUser();
+                                      //box.add(user);
+                                      for (int i = 0; i < 2; i++) {
+                                        if(i == index){
+                                          isSelected[i] = true;
+                                          box.put('gender','male');
+                                          print(box.get('gender'));
+                                        }
+                                        else{
+                                          isSelected[i] = false;
+                                          box.put('gender','female');
+                                          print(box.get('gender'));
+                                        }
+                                        //user.save();
 
-              Directory copyTo = Directory("/storage/self/primary/Download");
-              if ((await copyTo.exists())) {
-                // print("Path exist");
-                // var status = await Permission.storage.status;
-                // if (!status.isGranted) {
-                //   await Permission.storage.request();
-                // }
-              } else {
-                print("not exist");
-                // if (await Permission.storage.request().isGranted) {
-                // Either the permission was already granted before or the user just granted it.
-                await copyTo.create();
-                // } else {
-                //   print('Please give permission');
-                // }
-              }
+                                        //user.save();
+                                      }
+                                    });
+                                  },
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        actions: [
+                          ElevatedButton(onPressed: () => {
+                            if(stepController.text.isEmpty == false && heightController.text.isEmpty == false && int.parse(heightController.text) <= 250){
+                              if(isSelected[0]==true){
+                                height = int.parse(heightController.text),
+                                steps_length = (height * 0.415) / 100,// /100 to make it in meters
+                                print('male'),
+                              }
+                              else{
+                                height = int.parse(heightController.text),
+                                steps_length = (height * 0.413) / 100,// /100 to make it in meters
+                                print('female')
+                              },
+                              steps_target = int.parse(stepController.text),
+                              box.put('height',height),
+                              box.put('steps_length',steps_length),
+                              box.put('target_steps',steps_target),
+                              // user.save(),
+                              stepController.clear(),
+                              heightController.clear(),
+                              Navigator.pop(context,steps_target),
+                            }
+                          },child: Text('Ok')),
+                        ],
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.0)),
 
-              String newPath = "${copyTo.path}/db.db";
-              await source1.copy(newPath);
+                      );
+                    }
+                ),
+                  barrierDismissible: false,
+                )
+              ),
+            ),
+            Card(
+              shadowColor: Colors.grey,
+              elevation: 10,
+              clipBehavior: Clip.antiAlias,
+              margin: EdgeInsets.only(left: 10, right: 10,bottom: 10,top: 10),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(40),
+              ),
+              child: ListTile(
+                title: Text('Copy DB'),
+                onTap: () async {
+                  final dbFolder = await getDatabasesPath();
+                  File source1 = File('$dbFolder/db.db');
 
-              Fluttertoast.showToast(msg: 'Successfully Copied DB', toastLength: Toast.LENGTH_SHORT,gravity: ToastGravity.BOTTOM);
-            },
-          ),
-        )
+                  Directory copyTo = Directory("/storage/self/primary/Download");
+                  if ((await copyTo.exists())) {
+                    // print("Path exist");
+                    // var status = await Permission.storage.status;
+                    // if (!status.isGranted) {
+                    //   await Permission.storage.request();
+                    // }
+                  } else {
+                    print("not exist");
+                    // if (await Permission.storage.request().isGranted) {
+                    // Either the permission was already granted before or the user just granted it.
+                    await copyTo.create();
+                    // } else {
+                    //   print('Please give permission');
+                    // }
+                  }
+
+                  String newPath = "${copyTo.path}/db.db";
+                  await source1.copy(newPath);
+
+                  Fluttertoast.showToast(msg: 'Successfully Copied DB', toastLength: Toast.LENGTH_SHORT,gravity: ToastGravity.BOTTOM);
+                },
+              ),
+            )
           ],
         ),
       ),

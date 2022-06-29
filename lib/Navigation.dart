@@ -42,7 +42,7 @@ class Navigation extends StatefulWidget {
 class NavigationState extends State<Navigation> {
 
   bool hasPermissions = false, serviceEnabled = false;//hasPermissions if the gps permissions are given, serviceEnabled if the gps is enabled
-  double lat=0, lng=0;
+  double lat=0, lng=0, coor_points=1000;//lat for getting the latitude, lng for getting the longitude, coor_points for setting the coordinate points on slider
 
   geo.Position ?currentPosition;
 
@@ -52,7 +52,7 @@ class NavigationState extends State<Navigation> {
   Completer<MapController> controllerMap = Completer();
   MapController ?newMapController;
   // Set<Polyline> polylines = Set<Polyline>();
-  List<LatLng> polylineCoordinates =[];
+  List<LatLng> polylineCoordinates =[]; //for saving the coordinates temporary from db to be displayed on map
   // Polyline polylinePoints = new PolylinePoints();
 
   loc.LocationData ?currentLocation;
@@ -68,9 +68,13 @@ class NavigationState extends State<Navigation> {
 
   Map<String,List<LatLng>> polylines ={};
 
-  Timer ?timer;
+  Timer ?timer;//for setting the timer
 
   var box = Hive.box('user');
+
+  DateTimeRange? _dateRange;
+
+  String date_start='', date_end='';
 
   static final customCacheManager = CacheManager(
     Config(
@@ -133,7 +137,7 @@ class NavigationState extends State<Navigation> {
           });
 
           insert_toDb();
-          getCoordinates();
+          //getCoordinates();
         });
         //getCoordinates();
 
@@ -216,8 +220,8 @@ class NavigationState extends State<Navigation> {
     }
   }
 
-  getCoordinates() async{
-    List<Map> lista = await SqlDatabase.instance.select_coor();
+  getCoordinates(int x, String dt_st, String dt_ed) async{
+    List<Map> lista = await SqlDatabase.instance.select_coor(x,dt_st,dt_ed);
     //int ff = await SqlDatabase.instance.select_coor();
     polylineCoordinates =[];
     //print('I lista einai $polylineCoordinates');
@@ -233,6 +237,27 @@ class NavigationState extends State<Navigation> {
     // print('has inserted somethinggggggggggggggggg');
   }
 
+  Future pickDateRange(BuildContext context) async {
+    final initialDateRange = DateTimeRange(
+      start: DateTime.now(),
+      end: DateTime.now().add(Duration(hours: 24 * 2)),
+    );
+    final newDateRange = await showDateRangePicker(
+      context: context,
+      firstDate: DateTime(DateTime.now().year - 5),
+      lastDate: DateTime(DateTime.now().year + 5),
+      initialDateRange: _dateRange ?? initialDateRange,
+    );
+
+    if (newDateRange == null) return;
+
+    setState(() =>{
+      _dateRange = newDateRange,
+      date_start = DateFormat('dd-MM-yyyy').format(_dateRange!.start),
+      date_end = DateFormat('dd-MM-yyyy').format(_dateRange!.end),
+      // print('ELAAAAAAAAAAAAA $date_start, $date_end'),
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -328,7 +353,33 @@ class NavigationState extends State<Navigation> {
                              }
                            ),
                          ),
+                         MarkerLayerWidget(
+                           options: MarkerLayerOptions(
+                             markers:
+                               polylineCoordinates.isNotEmpty == true
+                                   ?
+                               [
+                                 Marker(
+                                   width: 50,
+                                   height: 32,
+                                   point: polylineCoordinates[0],
+                                   builder: (_) {
+                                     return Image.asset('assets/marker_walking.png');
+                                   }),
+                                 Marker(
+                                   width: 50,
+                                   height: 32,
+                                   point: polylineCoordinates.last,
+                                   builder: (_) {
+                                     return Image.asset('assets/marker_standing.png', scale: 15,);
+                                   })
+                               ]
+                                   :
+                               [],
+                             rotate: true,
 
+                           )
+                         ),
                        ],
                      ),
                     Positioned(
@@ -352,6 +403,113 @@ class NavigationState extends State<Navigation> {
                             Icons.my_location,
                             color: Colors.white,
                           ),
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      left: 20,
+                      bottom: 20,
+                      child: FloatingActionButton(
+                        onPressed: (){
+                          showDialog(context: context, builder: (context) => StatefulBuilder(
+                              builder: (BuildContext context, StateSetter setState) {
+                                return AlertDialog(
+                                  title: Text('Set the number of coordinate points and the date you want to display on map.',
+                                      textAlign: TextAlign.justify
+                                  ),
+                                  content: SizedBox(
+                                    child: SingleChildScrollView(
+                                      child: Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Text('Set the number of coordinate points'),
+                                          Row(
+                                            children: [
+                                              Text('10'),
+                                              Expanded(
+                                                child: Slider.adaptive(
+                                                  value: coor_points,
+                                                  min: 10,
+                                                  max: 5000,
+                                                  divisions: 5000,
+                                                  label: coor_points.round().toString(),
+                                                  onChanged: (coor_points) => setState(() => {
+                                                    this.coor_points = coor_points,
+                                                    // if(coor_points > 2000){
+                                                    //   Fluttertoast.showToast(msg: 'Select more than 2000 points only if you have high-end device', toastLength: Toast.LENGTH_LONG,gravity: ToastGravity.BOTTOM)
+                                                    // },
+                                                    // print(coor_points)
+                                                  }),
+                                                ),
+                                              ),
+                                              Text('5000')
+                                            ],
+                                          ),
+                                          SizedBox(height: 16),
+                                          Text('Set the start and the ending dates'),
+                                          Row(
+                                            children: [
+                                              Expanded(
+                                                child: ElevatedButton(
+                                                  onPressed: () => pickDateRange(context),
+                                                  child: _dateRange == null ? Text('From') : Text(DateFormat('dd-MM-yyyy').format(_dateRange!.start)),
+                                                ),
+                                              ),
+                                              const SizedBox(width: 8),
+                                              Icon(Icons.arrow_forward, color: Colors.white),
+                                              const SizedBox(width: 8),
+                                              Expanded(
+                                                child: ElevatedButton(
+                                                  onPressed: () => pickDateRange(context),
+                                                  child: _dateRange == null ? Text('Until') : Text(DateFormat('dd-MM-yyyy').format(_dateRange!.end)),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          Text('Or press the button below to see the route today'),
+                                          ElevatedButton(
+                                            onPressed: () => {
+                                              date_start = DateFormat('dd-MM-yyyy').format(DateTime.now()),
+                                              date_end = DateFormat('dd-MM-yyyy').format(DateTime.now()),
+                                              print('$date_start, $date_end')
+                                            },
+                                            child: Text('Today route')
+                                          )
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                  actions: [
+                                    ElevatedButton(
+                                      onPressed: () => {
+                                        print('$date_start, $date_end'),
+                                        if(date_start =='' || date_end ==''){
+                                          Fluttertoast.showToast(msg: 'Please select a date', toastLength: Toast.LENGTH_SHORT,gravity: ToastGravity.BOTTOM)
+                                        }
+                                        else{
+                                          if(coor_points > 2000){
+                                            Fluttertoast.showToast(msg: 'Select more than 2000 points only if you have high-end device', toastLength: Toast.LENGTH_LONG,gravity: ToastGravity.BOTTOM)
+                                          },
+                                          getCoordinates(coor_points.toInt(),date_start,date_end),
+                                          // print('EDOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO $_dateRange'),
+                                          // print('$date_start,$date_end'),
+                                          Navigator.pop(context,coor_points)
+                                        }
+                                      },
+                                      child: Text('Ok')
+                                    )
+                                  ],
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.0)),
+
+                                );
+                              }
+                          ),
+                            barrierDismissible: false,
+                          );
+                        },
+                        child: Icon(
+                          FontAwesomeIcons.route,
+                          color: Colors.white,
                         ),
                       ),
                     ),
