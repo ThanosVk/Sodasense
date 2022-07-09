@@ -92,8 +92,8 @@ class _CompassState extends State<Compass> {
   //Function for setting address and location
   void getData() async {
     Position position = await getGeoLocationPosition();
-    lat=position.latitude;
-    lng=position.longitude;
+    lat=position.latitude.toStringAsFixed(4);
+    lng=position.longitude.toStringAsFixed(4);
     //location ='Lat: ${(position.latitude).toStringAsFixed(4)} , Long: ${(position.longitude).toStringAsFixed(4)}';
     Altitude = position.altitude;
 
@@ -183,9 +183,9 @@ class _CompassState extends State<Compass> {
                         ),
                         children: serviceEnabled==true  ? [
                           TextSpan(text: 'Lat: ',style: const TextStyle(fontWeight: FontWeight.bold)),
-                          TextSpan(text: '${lat.toStringAsFixed(4)},'),
+                          TextSpan(text: '${lat},'),
                           TextSpan(text: ' Lon: ',style: const TextStyle(fontWeight: FontWeight.bold)),
-                          TextSpan(text: '${lng.toStringAsFixed(4)}'),
+                          TextSpan(text: '${lng}'),
                         ]
                         : [
                           TextSpan(text: '$loc')

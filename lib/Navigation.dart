@@ -17,6 +17,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:hive/hive.dart';
 import 'package:thesis/SqlDatabase.dart';
 import 'package:flutter/services.dart';
+import 'package:sliding_up_panel/sliding_up_panel.dart';
 
 class CachedTileProvider extends TileProvider {
   const CachedTileProvider({customCacheManager});
@@ -43,6 +44,7 @@ class NavigationState extends State<Navigation> {
 
   bool hasPermissions = false, serviceEnabled = false;//hasPermissions if the gps permissions are given, serviceEnabled if the gps is enabled
   double lat=0, lng=0, coor_points=1000;//lat for getting the latitude, lng for getting the longitude, coor_points for setting the coordinate points on slider
+  double speed=0, distance=0 ;//speed for getting the speed, distance for calculating the distance of the route
 
   geo.Position ?currentPosition;
 
@@ -76,6 +78,11 @@ class NavigationState extends State<Navigation> {
 
   String date_start='', date_end='';
 
+  List<List> faw = [];
+
+  //panelController for managing what happens inside the SlidingUpPanel
+  final PanelController panelController = PanelController();
+
   static final customCacheManager = CacheManager(
     Config(
         'customCacheKey',
@@ -84,7 +91,7 @@ class NavigationState extends State<Navigation> {
     ),
   );
 
-  List<List> faw = [];
+
 
 
   @override
@@ -122,6 +129,7 @@ class NavigationState extends State<Navigation> {
           setState(() {
             setpoint(cLoc.latitude, cLoc.longitude);
 
+            speed = cLoc.speed! * 3.6;
             //polylineCoordinates.add(LatLng(lat,lng));
             //faw.add(['$date,$lat,$lng,false']);
             //box.put('coordinates',faw);
@@ -223,7 +231,7 @@ class NavigationState extends State<Navigation> {
   getCoordinates(int x, String dt_st, String dt_ed) async{
     List<Map> lista = await SqlDatabase.instance.select_coor(x,dt_st,dt_ed);
     //int ff = await SqlDatabase.instance.select_coor();
-    polylineCoordinates =[];
+    polylineCoordinates = [];
     //print('I lista einai $polylineCoordinates');
     for(int i=0;i<lista.length;i++){
       polylineCoordinates.add(LatLng(lista[i]['lat'], lista[i]['lng']));
@@ -259,8 +267,20 @@ class NavigationState extends State<Navigation> {
     });
   }
 
+  double getDistance() {
+    double tmp_distance = 0;
+
+    for(int i=0; i<polylineCoordinates.length - 1; i++){
+      tmp_distance = tmp_distance + geo.Geolocator.distanceBetween(polylineCoordinates[i].latitude, polylineCoordinates[i].longitude,polylineCoordinates[i+1].latitude, polylineCoordinates[i].longitude);
+    }
+
+    return tmp_distance/1000;
+  }
+
   @override
   Widget build(BuildContext context) {
+    Size size = MediaQuery.of(context).size;
+
     return Scaffold(
           drawer: Sidemenu(),
           appBar: AppBar(
@@ -384,7 +404,7 @@ class NavigationState extends State<Navigation> {
                      ),
                     Positioned(
                       right: 20,
-                      bottom: 20,
+                      bottom: size.height * 0.06 +15,
                       child: InkWell(
                         onLongPress: (){
                           // print('MEGALLOOOOOO');
@@ -408,108 +428,118 @@ class NavigationState extends State<Navigation> {
                     ),
                     Positioned(
                       left: 20,
-                      bottom: 20,
-                      child: FloatingActionButton(
-                        onPressed: (){
-                          showDialog(context: context, builder: (context) => StatefulBuilder(
-                              builder: (BuildContext context, StateSetter setState) {
-                                return AlertDialog(
-                                  title: Text('Set the number of coordinate points and the date you want to display on map.',
-                                      textAlign: TextAlign.justify
-                                  ),
-                                  content: SizedBox(
-                                    child: SingleChildScrollView(
-                                      child: Column(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Text('Set the number of coordinate points'),
-                                          Row(
-                                            children: [
-                                              Text('10'),
-                                              Expanded(
-                                                child: Slider.adaptive(
-                                                  value: coor_points,
-                                                  min: 10,
-                                                  max: 5000,
-                                                  divisions: 5000,
-                                                  label: coor_points.round().toString(),
-                                                  onChanged: (coor_points) => setState(() => {
-                                                    this.coor_points = coor_points,
-                                                    // if(coor_points > 2000){
-                                                    //   Fluttertoast.showToast(msg: 'Select more than 2000 points only if you have high-end device', toastLength: Toast.LENGTH_LONG,gravity: ToastGravity.BOTTOM)
-                                                    // },
-                                                    // print(coor_points)
-                                                  }),
+                      bottom: size.height * 0.06 + 15,
+                      child: InkWell(
+                        onLongPress: (){
+                          polylineCoordinates = [];
+                        },
+                        child: FloatingActionButton(
+                          onPressed: (){
+                            showDialog(context: context, builder: (context) => StatefulBuilder(
+                                builder: (BuildContext context, StateSetter setState) {
+                                  return AlertDialog(
+                                    title: Text('Set the number of coordinate points and the date you want to display on map.',
+                                        textAlign: TextAlign.justify
+                                    ),
+                                    content: SizedBox(
+                                      child: SingleChildScrollView(
+                                        child: Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Text('Set the number of coordinate points'),
+                                            Row(
+                                              children: [
+                                                Text('10'),
+                                                Expanded(
+                                                  child: Slider.adaptive(
+                                                    value: coor_points,
+                                                    min: 10,
+                                                    max: 5000,
+                                                    divisions: 5000,
+                                                    label: coor_points.round().toString(),
+                                                    onChanged: (coor_points) => setState(() => {
+                                                      this.coor_points = coor_points,
+                                                      // if(coor_points > 2000){
+                                                      //   Fluttertoast.showToast(msg: 'Select more than 2000 points only if you have high-end device', toastLength: Toast.LENGTH_LONG,gravity: ToastGravity.BOTTOM)
+                                                      // },
+                                                      // print(coor_points)
+                                                    }),
+                                                  ),
                                                 ),
-                                              ),
-                                              Text('5000')
-                                            ],
-                                          ),
-                                          SizedBox(height: 16),
-                                          Text('Set the start and the ending dates'),
-                                          Row(
-                                            children: [
-                                              Expanded(
-                                                child: ElevatedButton(
-                                                  onPressed: () => pickDateRange(context),
-                                                  child: _dateRange == null ? Text('From') : Text(DateFormat('dd-MM-yyyy').format(_dateRange!.start)),
+                                                Text('5000')
+                                              ],
+                                            ),
+                                            SizedBox(height: 16),
+                                            Text('Set the start and the ending dates'),
+                                            Row(
+                                              children: [
+                                                Expanded(
+                                                  child: ElevatedButton(
+                                                    onPressed: () => pickDateRange(context),
+                                                    child: _dateRange == null ? Text('From') : Text(DateFormat('dd-MM-yyyy').format(_dateRange!.start)),
+                                                  ),
                                                 ),
-                                              ),
-                                              const SizedBox(width: 8),
-                                              Icon(Icons.arrow_forward, color: Colors.white),
-                                              const SizedBox(width: 8),
-                                              Expanded(
-                                                child: ElevatedButton(
-                                                  onPressed: () => pickDateRange(context),
-                                                  child: _dateRange == null ? Text('Until') : Text(DateFormat('dd-MM-yyyy').format(_dateRange!.end)),
+                                                const SizedBox(width: 8),
+                                                Icon(Icons.arrow_forward, color: Colors.white),
+                                                const SizedBox(width: 8),
+                                                Expanded(
+                                                  child: ElevatedButton(
+                                                    onPressed: () => pickDateRange(context),
+                                                    child: _dateRange == null ? Text('Until') : Text(DateFormat('dd-MM-yyyy').format(_dateRange!.end)),
+                                                  ),
                                                 ),
-                                              ),
-                                            ],
-                                          ),
-                                          Text('Or press the button below to see the route today'),
-                                          ElevatedButton(
-                                            onPressed: () => {
-                                              date_start = DateFormat('dd-MM-yyyy').format(DateTime.now()),
-                                              date_end = DateFormat('dd-MM-yyyy').format(DateTime.now()),
-                                              print('$date_start, $date_end')
-                                            },
-                                            child: Text('Today route')
-                                          )
-                                        ],
+                                              ],
+                                            ),
+                                            Text('Or press the button below to see the route today'),
+                                            ElevatedButton(
+                                              onPressed: () => {
+                                                date_start = DateFormat('dd-MM-yyyy').format(DateTime.now()),
+                                                date_end = DateFormat('dd-MM-yyyy').format(DateTime.now()),
+                                                print('$date_start, $date_end')
+                                              },
+                                              child: Text('Today route')
+                                            )
+                                          ],
+                                        ),
                                       ),
                                     ),
-                                  ),
-                                  actions: [
-                                    ElevatedButton(
-                                      onPressed: () => {
-                                        print('$date_start, $date_end'),
-                                        if(date_start =='' || date_end ==''){
-                                          Fluttertoast.showToast(msg: 'Please select a date', toastLength: Toast.LENGTH_SHORT,gravity: ToastGravity.BOTTOM)
-                                        }
-                                        else{
-                                          if(coor_points > 2000){
-                                            Fluttertoast.showToast(msg: 'Select more than 2000 points only if you have high-end device', toastLength: Toast.LENGTH_LONG,gravity: ToastGravity.BOTTOM)
-                                          },
-                                          getCoordinates(coor_points.toInt(),date_start,date_end),
-                                          // print('EDOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO $_dateRange'),
-                                          // print('$date_start,$date_end'),
-                                          Navigator.pop(context,coor_points)
-                                        }
-                                      },
-                                      child: Text('Ok')
-                                    )
-                                  ],
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.0)),
+                                    actions: [
+                                      ElevatedButton(
+                                        onPressed: () async {
+                                          print('$date_start, $date_end');
+                                          if(date_start =='' || date_end ==''){
+                                            Fluttertoast.showToast(msg: 'Please select a date', toastLength: Toast.LENGTH_SHORT,gravity: ToastGravity.BOTTOM);
+                                          }
+                                          else{
+                                            if(coor_points > 2000){
+                                              Fluttertoast.showToast(msg: 'Select more than 2000 points only if you have high-end device', toastLength: Toast.LENGTH_LONG,gravity: ToastGravity.BOTTOM);
+                                            }
+                                            await getCoordinates(coor_points.toInt(),date_start,date_end);
+                                            if(polylineCoordinates.isNotEmpty){
+                                              setState(() {
+                                                distance = getDistance();
+                                              });
+                                            }
+                                            // print('EDOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO $_dateRange'),
+                                            // print('$date_start,$date_end'),
+                                            Navigator.pop(context,coor_points);
+                                          }
+                                        },
+                                        child: Text('Ok')
+                                      )
+                                    ],
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.0)),
 
-                                );
-                              }
+                                  );
+                                }
+                            ),
+                              barrierDismissible: false,
+                            );
+                          },
+                          child: Icon(
+                            FontAwesomeIcons.route,
+                            color: Colors.white,
                           ),
-                            barrierDismissible: false,
-                          );
-                        },
-                        child: Icon(
-                          FontAwesomeIcons.route,
-                          color: Colors.white,
                         ),
                       ),
                     ),
@@ -549,15 +579,56 @@ class NavigationState extends State<Navigation> {
                     //     ),
                     //   ),
                     // ),
-                    Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 34),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-
-                        ],
+                    SlidingUpPanel(
+                      controller: panelController,
+                      minHeight: size.height * 0.06,
+                      maxHeight: size.height * 0.5,
+                      borderRadius: BorderRadius.vertical(top: Radius.circular(18.0)),
+                      parallaxEnabled: true,
+                      parallaxOffset: 0.5,
+                      panel: Container(
+                        padding: EdgeInsets.symmetric(horizontal: 24),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            SizedBox(height: size.height * 0.03),
+                            GestureDetector(
+                              child: Center(
+                                child: Container(
+                                  width: 45,
+                                  height: 10,
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey[300],
+                                    borderRadius: BorderRadius.circular(12)
+                                  ),
+                                ),
+                              ),
+                              onTap: () => panelController.isPanelOpen ? panelController.close() : panelController.open(),
+                            ),
+                            SizedBox(height: size.height * 0.07),
+                            Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Column(
+                                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                      children: [
+                                        Text('Distance traveled in Km', style: TextStyle(fontSize: 16.0,fontWeight: FontWeight.bold)),
+                                        Text('${distance.toStringAsFixed(2)}', style: TextStyle(fontSize: 16.0))
+                                      ]
+                                  ),
+                                  Column(
+                                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                      children: [
+                                        Text('Moving speed in Km/h', style: TextStyle(fontSize: 16.0,fontWeight: FontWeight.bold)),
+                                        Text('${speed.toStringAsFixed(1)}', style: TextStyle(fontSize: 16.0))
+                                      ]
+                                  )
+                                ]
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
+                    )
                   ],
                 );
               }

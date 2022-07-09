@@ -162,8 +162,9 @@ class _SettingsState extends State<Settings> {
                                     maxLength: 5,
                                     controller: sensors_contr,
                                     decoration: InputDecoration(
-                                        labelText: "Sampling rate in seconds",
-                                        counterText: ''
+                                      labelText: "Sampling rate in seconds",
+                                      counterText: '',
+                                      hintText: box.get('sensors_sr') == null ? "" : "${box.get('sensors_sr')}"
                                     ),
                                     keyboardType: TextInputType.number,
                                   ),
@@ -212,7 +213,8 @@ class _SettingsState extends State<Settings> {
                                       controller: alt_contr,
                                       decoration: InputDecoration(
                                           labelText: "Sampling rate in seconds",
-                                          counterText: ''
+                                          counterText: '',
+                                          hintText: box.get('altitude_sr') == null ? "" : "${box.get('altitude_sr')}"
                                       ),
                                       keyboardType: TextInputType.number,
                                     ),
@@ -266,7 +268,8 @@ class _SettingsState extends State<Settings> {
                                   controller: stepController,
                                   decoration: InputDecoration(
                                       labelText: "Steps Target",
-                                      counterText: ''
+                                      counterText: '',
+                                      hintText: box.get('target_steps') == null ? "" : "${box.get('target_steps')}"
                                   ),
                                   keyboardType: TextInputType.number,
                                 ),
@@ -276,7 +279,8 @@ class _SettingsState extends State<Settings> {
                                   decoration: InputDecoration(
                                       labelText: "Height in cm",
                                       errorText: height_validate ? null: Height_Textfield_check(),
-                                      counterText: ''
+                                      counterText: '',
+                                      hintText: box.get('height') == null ? "" : "${box.get('height')}"
                                   ),
                                   keyboardType: TextInputType.number,
                                   onChanged: (text) => setState(() {
