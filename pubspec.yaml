@@ -44,7 +44,7 @@ dependencies:
   geolocator: ^8.0.0
   geocoding: ^2.0.1
   flutter_secure_storage: ^5.0.2
-  font_awesome_flutter: ^9.2.0
+  font_awesome_flutter: ^10.1.0
   flutter_map: ^0.14.0
   latlng: ^0.1.0
   proj4dart: ^2.0.0
