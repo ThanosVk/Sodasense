@@ -63,31 +63,37 @@ bool isDarkMode = false;//check if dark mode is enabled
 // The callback function should always be a top-level function.
 void startCallback() {
   // The setTaskHandler function must be called to handle the task in the background.
-  FlutterForegroundTask.setTaskHandler(FirstTaskHandler());
+  FlutterForegroundTask.setTaskHandler(MyTaskHandler());
 }
 
-class FirstTaskHandler extends TaskHandler {
-  int updateCount = 0;
+class MyTaskHandler extends TaskHandler {
+  SendPort? _sendPort;
+  int _eventCount = 0;
 
   @override
   Future<void> onStart(DateTime timestamp, SendPort? sendPort) async {
-    // You can use the getData function to get the data you saved.
+    _sendPort = sendPort;
+
+    // You can use the getData function to get the stored data.
     final customData = await FlutterForegroundTask.getData<String>(key: 'customData');
-    print('customData: $customData');
+    // print('customData: $customData');
   }
 
   @override
   Future<void> onEvent(DateTime timestamp, SendPort? sendPort) async {
-    FlutterForegroundTask.updateService(notificationTitle: 'FirstTaskHandler',notificationText: timestamp.toString(),callback: updateCount >= 10 ? updateCallback : null);
-    // Send data to the main isolate.
-    sendPort?.send(timestamp);
-    sendPort?.send(updateCount);
+    // FlutterForegroundTask.updateService(
+    //     notificationTitle: 'MyTaskHandler',
+    //     notificationText: 'eventCount: $_eventCount'
+    // );
 
-    updateCount++;
+    // Send data to the main isolate.
+    sendPort?.send(_eventCount);
+
+    _eventCount++;
   }
 
   @override
-  Future<void> onDestroy(DateTime timestamp) async {
+  Future<void> onDestroy(DateTime timestamp, SendPort? sendPort) async {
     // You can use the clearAllData function to clear all the stored data.
     await FlutterForegroundTask.clearAllData();
   }
@@ -95,30 +101,21 @@ class FirstTaskHandler extends TaskHandler {
   @override
   void onButtonPressed(String id) {
     // Called when the notification button on the Android platform is pressed.
-    print('onButtonPressed >> $id');
-  }
-}
-
-void updateCallback() {
-  FlutterForegroundTask.setTaskHandler(SecondTaskHandler());
-}
-
-class SecondTaskHandler extends TaskHandler {
-  @override
-  Future<void> onStart(DateTime timestamp, SendPort? sendPort) async {
-
+    // print('onButtonPressed >> $id');
   }
 
   @override
-  Future<void> onEvent(DateTime timestamp, SendPort? sendPort) async {
-    FlutterForegroundTask.updateService(notificationTitle: 'SecondTaskHandler', notificationText: timestamp.toString());
-    // Send data to the main isolate.
-    sendPort?.send(timestamp);
-  }
+  void onNotificationPressed() {
+    // Called when the notification itself on the Android platform is pressed.
+    //
+    // "android.permission.SYSTEM_ALERT_WINDOW" permission must be granted for
+    // this function to be called.
 
-  @override
-  Future<void> onDestroy(DateTime timestamp) async {
-
+    // Note that the app will only route to "/resume-route" when it is exited so
+    // it will usually be necessary to send a message through the send port to
+    // signal it to restore state when the app is already started.
+    FlutterForegroundTask.launchApp("/resume-route");
+    _sendPort?.send('onNotificationPressed');
   }
 }
 
@@ -168,8 +165,7 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver{
   //steps_count for getting the value of stepController, steps_target for getting the value of textfield, height _count for getting the value of height Controller
   //height for getting the value from heightController Textfield
   int steps_count=0 ,steps_target=0, height_count=0,height=0;
-  //steps_length for finding the exact meters per user height,dist for distance in km
-  double steps_length=0,dist=0;
+  double steps_length=0,dist=0;//steps_length for finding the exact meters per user height,dist for distance in km
   late Stream<StepCount> _stepCountStream;
   late Stream<PedestrianStatus> _pedestrianStatusStream;
   String _status = '', steps = 'ok';
@@ -457,415 +453,448 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver{
 
     Size size = MediaQuery.of(context).size;
 
-    return Scaffold(
-      drawer: Sidemenu(),
-        appBar: AppBar(
-          title: const Text("Main screen")
+    return WillPopScope(
+      onWillPop: () async {
+
+        bool popup = false;
+
+        showDialog(context: context, builder: (context) => AlertDialog(
+          title: Text('Logout'),
+          content: Text('Are you sure you want to exit?'),
+          actions: [
+            ElevatedButton(onPressed: () => {
+              popup =false,
+              Navigator.pop(context)
+            },child: Text('No')),
+            ElevatedButton(onPressed: () async {
+              await StartScreen().stopForegroundTask();
+              //await LoginState().db.close();
+              var box = Hive.box('user');
+              box.delete('email');
+              box.delete('pass');
+              popup = true;
+              Navigator.push(context, MaterialPageRoute(builder: (context) => Login()));
+            }, child: Text('Yes'))
+          ],
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.0)),
         ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          child: (
-            Column(
-              children: [
-                // Row(
-                //   mainAxisAlignment: MainAxisAlignment.spaceAround,
-                //     children:[
-                //       Text('Welcome back!', style: TextStyle(fontSize: 18.0,fontWeight: FontWeight.bold))
-                //     ]
-                // ),
+          barrierDismissible: false,
+        );
 
-                SizedBox(height: size.height * 0.03),
+        return popup;
+      },
+      child: Scaffold(
+        drawer: Sidemenu(),
+          appBar: AppBar(
+            title: const Text("Main screen")
+          ),
+        body: SafeArea(
+          child: SingleChildScrollView(
+            child: (
+              Column(
+                children: [
+                  // Row(
+                  //   mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  //     children:[
+                  //       Text('Welcome back!', style: TextStyle(fontSize: 18.0,fontWeight: FontWeight.bold))
+                  //     ]
+                  // ),
 
-                Builder(builder: (context){
-                  if(hasPermissions){
-                    return Card(
-                      shadowColor: Colors.grey,
-                      elevation: 10,
-                      clipBehavior: Clip.antiAlias,
-                      margin: EdgeInsets.only(left: 10, right: 10),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(40),
-                      ),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [Colors.white, Colors.white],
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                          ),
+                  SizedBox(height: size.height * 0.03),
+
+                  Builder(builder: (context){
+                    if(hasPermissions){
+                      return Card(
+                        shadowColor: Colors.grey,
+                        elevation: 10,
+                        clipBehavior: Clip.antiAlias,
+                        margin: EdgeInsets.only(left: 10, right: 10),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(40),
                         ),
-                        padding: EdgeInsets.all(16),
-                        child: Column(
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              // crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Column(
-                                  children: [
-                                    RichText(
-                                      text: TextSpan(
-                                          children: [
-                                            TextSpan(
-                                                text: 'Today',
-                                                style: TextStyle(
-                                                    fontWeight: FontWeight.bold,
-                                                    color: Colors.black,
-                                                    fontSize: 26
-                                                )
-                                            ),
-                                          ]
-                                      ),
-                                    )
-                                  ],
-                                ),
-                                Column(
-                                  children: [
-                                    IconButton(
-                                      onPressed: () => {
-                                        showDialog(context: context, builder: (context) => StatefulBuilder(
-                                            builder: (BuildContext context, StateSetter setState) {
-                                            return AlertDialog(
-                                              title: Text('Set your daily target\nor change your height',
-                                                  textAlign: TextAlign.justify
+                        child: Container(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [Colors.white, Colors.white],
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                            ),
+                          ),
+                          padding: EdgeInsets.all(16),
+                          child: Column(
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                // crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Column(
+                                    children: [
+                                      RichText(
+                                        text: TextSpan(
+                                            children: [
+                                              TextSpan(
+                                                  text: 'Today',
+                                                  style: TextStyle(
+                                                      fontWeight: FontWeight.bold,
+                                                      color: Colors.black,
+                                                      fontSize: 26
+                                                  )
                                               ),
-                                              content: SizedBox(
-                                                child: Column(
-                                                  mainAxisSize: MainAxisSize.min,
-                                                  children: [
-                                                    TextField(
-                                                      maxLength: 5,
-                                                      controller: stepController,
-                                                      keyboardType: TextInputType.number,
-                                                      decoration: InputDecoration(
-                                                        labelText: "Steps Target",
-                                                        counterText: ''
+                                            ]
+                                        ),
+                                      )
+                                    ],
+                                  ),
+                                  Column(
+                                    children: [
+                                      IconButton(
+                                        onPressed: () => {
+                                          showDialog(context: context, builder: (context) => StatefulBuilder(
+                                              builder: (BuildContext context, StateSetter setState) {
+                                              return AlertDialog(
+                                                title: Text('Set your daily target\nor change your height',
+                                                    textAlign: TextAlign.justify
+                                                ),
+                                                content: SizedBox(
+                                                  child: Column(
+                                                    mainAxisSize: MainAxisSize.min,
+                                                    children: [
+                                                      TextField(
+                                                        maxLength: 5,
+                                                        controller: stepController,
+                                                        keyboardType: TextInputType.number,
+                                                        decoration: InputDecoration(
+                                                          labelText: "Steps Target",
+                                                          counterText: '',
+                                                          hintText: box.get('target_steps') == null ? "" : "${box.get('target_steps')}"
+                                                        ),
                                                       ),
-                                                    ),
-                                                    TextField(
-                                                      maxLength: 3,
-                                                      controller: heightController,
-                                                      decoration: InputDecoration(
+                                                      TextField(
+                                                        maxLength: 3,
+                                                        controller: heightController,
+                                                        decoration: InputDecoration(
                                                           labelText: "Height in cm",
                                                           errorText: height_validate ? null: Height_Textfield_check(),
-                                                          counterText: ''
+                                                          counterText: '',
+                                                          hintText: box.get('height') == null ? "" : "${box.get('height')}"
+                                                        ),
+                                                        keyboardType: TextInputType.number,
+                                                        onChanged: (text) => setState(() {
+                                                          height_validate = height_error_msg();
+                                                        }),
                                                       ),
-                                                      keyboardType: TextInputType.number,
-                                                      onChanged: (text) => setState(() {
-                                                        height_validate = height_error_msg();
-                                                      }),
-                                                    ),
-                                                  ],
+                                                    ],
+                                                  ),
+                                                ),
+                                                actions: [
+                                                  ElevatedButton(onPressed: () => {
+                                                    if(stepController.text.isEmpty == false && heightController.text.isEmpty == false && int.parse(heightController.text) <= 250){
+                                                      if(isSelected[0]==true){
+                                                        height = int.parse(heightController.text),
+                                                        steps_length = (height * 0.415) / 100,// /100 to make it in meters
+                                                        print('male')
+                                                      }
+                                                      else{
+                                                        height = int.parse(heightController.text),
+                                                        steps_length = (height * 0.413) / 100,// /100 to make it in meters
+                                                        print('female')
+                                                      },
+                                                      steps_target = int.parse(stepController.text),
+                                                      user.steps_length = steps_length,
+                                                      user.height = height,
+                                                      user.target_steps = steps_target,
+                                                      box.put('height',user.height),
+                                                      box.put('steps_length',user.steps_length),
+                                                      box.put('target_steps',user.target_steps),
+                                                      // user?.save(),
+                                                      stepController.clear(),
+                                                      heightController.clear(),
+                                                      Navigator.pop(context,steps_target),
+                                                    }
+                                                  },child: Text('Ok')),
+                                                ],
+                                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.0)),
+
+                                              );
+                                            }
+                                          ),
+                                          )
+                                        },
+                                        icon: FaIcon(FontAwesomeIcons.bullseye),
+                                        color: isDarkMode == true ? Colors.black: Colors.black,
+                                      )
+                                    ],
+                                  )
+                                ],
+                              ),
+
+                              SizedBox(height: size.height * 0.03),
+
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: <Widget>[
+                                  Center(
+                                    child: Container(
+                                        height: 160,
+                                        width: 160,
+                                        child: Stack(
+                                          fit: StackFit.expand,
+                                          children: [
+                                            CircularProgressIndicator(
+                                              value:steps=='ok' && box.get('today_steps') != null ? box.get('today_steps')/box.get('target_steps') : 0,
+                                              strokeWidth: 16,
+                                              backgroundColor: Color(0xfff8f9f9),
+                                            ),
+                                            Center(
+                                              child: RichText(
+                                                text: TextSpan(
+                                                    children: [
+                                                      TextSpan(
+                                                          text: steps=='ok' && box.get('today_steps') != null ? '${box.get('today_steps')}/${box.get('target_steps')}' : '${steps}/${box.get('target_steps')}',
+                                                          style: TextStyle(
+                                                            color: Colors.black,
+                                                            fontWeight: FontWeight.bold,
+                                                          )
+                                                      ),
+                                                      WidgetSpan(
+                                                          child: RotatedBox(
+                                                              quarterTurns: 3,
+                                                              child: FaIcon(FontAwesomeIcons.shoePrints, size: 12,color: isDarkMode == true ? Colors.black: Colors.black,)
+                                                          )
+                                                      )
+                                                    ]
                                                 ),
                                               ),
-                                              actions: [
-                                                ElevatedButton(onPressed: () => {
-                                                  if(stepController.text.isEmpty == false && heightController.text.isEmpty == false && int.parse(heightController.text) <= 250){
-                                                    if(isSelected[0]==true){
-                                                      height = int.parse(heightController.text),
-                                                      steps_length = (height * 0.415) / 100,// /100 to make it in meters
-                                                      print('male')
-                                                    }
-                                                    else{
-                                                      height = int.parse(heightController.text),
-                                                      steps_length = (height * 0.413) / 100,// /100 to make it in meters
-                                                      print('female')
-                                                    },
-                                                    steps_target = int.parse(stepController.text),
-                                                    user.steps_length = steps_length,
-                                                    user.height = height,
-                                                    user.target_steps = steps_target,
-                                                    box.put('height',user.height),
-                                                    box.put('steps_length',user.steps_length),
-                                                    box.put('target_steps',user.target_steps),
-                                                    // user?.save(),
-                                                    stepController.clear(),
-                                                    heightController.clear(),
-                                                    Navigator.pop(context,steps_target),
-                                                  }
-                                                },child: Text('Ok')),
-                                              ],
-                                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.0)),
-
-                                            );
-                                          }
-                                        ),
+                                            )
+                                          ],
                                         )
-                                      },
-                                      icon: FaIcon(FontAwesomeIcons.bullseye),
-                                      color: isDarkMode == true ? Colors.black: Colors.black,
-                                    )
-                                  ],
-                                )
-                              ],
-                            ),
-
-                            SizedBox(height: size.height * 0.03),
-
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: <Widget>[
-                                Center(
-                                  child: Container(
-                                      height: 160,
-                                      width: 160,
-                                      child: Stack(
-                                        fit: StackFit.expand,
-                                        children: [
-                                          CircularProgressIndicator(
-                                            value:steps=='ok' && box.get('today_steps') != null ? box.get('today_steps')/box.get('target_steps') : 0,
-                                            strokeWidth: 16,
-                                            backgroundColor: Color(0xfff8f9f9),
-                                          ),
-                                          Center(
-                                            child: RichText(
-                                              text: TextSpan(
-                                                  children: [
-                                                    TextSpan(
-                                                        text: steps=='ok' && box.get('today_steps') != null ? '${box.get('today_steps')}/${box.get('target_steps')}' : '${steps}/${box.get('target_steps')}',
-                                                        style: TextStyle(
-                                                          color: Colors.black,
-                                                          fontWeight: FontWeight.bold,
-                                                        )
-                                                    ),
-                                                    WidgetSpan(
-                                                        child: RotatedBox(
-                                                            quarterTurns: 3,
-                                                            child: FaIcon(FontAwesomeIcons.shoePrints, size: 12,color: isDarkMode == true ? Colors.black: Colors.black,)
-                                                        )
-                                                    )
-                                                  ]
-                                              ),
-                                            ),
-                                          )
-                                        ],
-                                      )
+                                    ),
                                   ),
-                                ),
-                              ],
-                            ),
-
-                            SizedBox(height: size.height * 0.03),
-
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text('$dist',
-                                  style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 14
-                                  ),
-                                ),
-                              ],
-                            ),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text('Km by steps',
-                                    style: TextStyle(
-                                      //fontWeight: FontWeight.bold,
-                                        color: Colors.black,
-                                        fontSize: 14
-                                    )
-                                )
-                              ],
-                            )
-                          ],
-                        ),
-                      ),
-                    );
-                  }
-                  else{
-                    return buildPermissionSheet();
-                  }
-                }),
-
-                SizedBox(height: size.height * 0.03),
-
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    Column(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: [
-                        ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            minimumSize: const Size(125,35),
-                            maximumSize: const Size(125,35),
-                          ),
-                          onPressed:() => {
-                            Navigator.push(context, MaterialPageRoute(builder: (context) => Navigation()))
-                          },
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text('Route'),
-                              SizedBox(
-                                width: 5,
-                              ),
-                              Icon(
-                                Icons.location_on_outlined,
-                                size: 24.0,
-                              ),
-                            ],
-                          ),
-                          // style: ElevatedButton.styleFrom(
-                          //   minimumSize: ,
-                          //   maximumSize: ,
-                          // ),
-                        ),
-                      ]
-
-                    ),
-                    Column(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: [
-                        ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            minimumSize: const Size(125,35),
-                            maximumSize: const Size(125,35),
-                          ),
-                          onPressed:() => {
-                            Navigator.push(context, MaterialPageRoute(builder: (context) => Compass()))
-                          },
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text('Compass'),
-                              SizedBox(
-                                width: 5,
-                              ),
-                              Icon(
-                                Icons.explore_outlined,
-                                size: 24.0,
-                              ),
-                            ],
-                          )
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-
-                SizedBox(height: size.height * 0.03),
-
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    Column(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        children: [
-                          ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              minimumSize: const Size(125,35),
-                              maximumSize: const Size(125,35),
-                            ),
-                            onPressed:() => {
-                              Navigator.push(context, MaterialPageRoute(builder: (context) => Sensors()))
-                            },
-                            child:Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text('Sensors'),
-                                SizedBox(
-                                  width: 5,
-                                ),
-                                Icon(
-                                  Icons.sensors_outlined,
-                                  size: 24.0,
-                                ),
-                              ],
-                            )
-                          ),
-                        ]
-
-                    ),
-                    Column(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: [
-                        ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            minimumSize: const Size(125,35),
-                            maximumSize: const Size(125,35),
-                          ),
-                          onPressed: () => {
-                            Navigator.push(context, MaterialPageRoute(builder: (context) => Settings()))
-                          },
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text('Settings'),
-                              SizedBox(
-                                width: 5,
-                              ),
-                              Icon(
-                                Icons.settings,
-                                size: 24.0,
-                              ),
-                            ],
-                          )
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-
-                SizedBox(height: size.height * 0.03),
-
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    Column(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        children: [
-                          ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              minimumSize: const Size(125,35),
-                              maximumSize: const Size(125,35),
-                            ),
-                            onPressed:() => {
-                              showDialog(context: context, builder: (context) => AlertDialog(
-                                title: Text('Logout'),
-                                content: Text('Are you sure you want to exit?'),
-                                actions: [
-                                  ElevatedButton(onPressed: () => {
-                                    Navigator.pop(context)
-                                  },child: Text('No')),
-                                  ElevatedButton(onPressed: () async {
-                                    await StartScreen().stopForegroundTask();
-                                    //await LoginState().db.close();
-                                    var box = Hive.box('user');
-                                    box.delete('email');
-                                    box.delete('pass');
-                                    Navigator.push(context, MaterialPageRoute(builder: (context) => Login()));
-                                  }, child: Text('Yes'))
                                 ],
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.0)),
                               ),
-                                barrierDismissible: false,
+
+                              SizedBox(height: size.height * 0.03),
+
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text('$dist',
+                                    style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 14
+                                    ),
+                                  ),
+                                ],
                               ),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text('Km by steps',
+                                      style: TextStyle(
+                                        //fontWeight: FontWeight.bold,
+                                          color: Colors.black,
+                                          fontSize: 14
+                                      )
+                                  )
+                                ],
+                              )
+                            ],
+                          ),
+                        ),
+                      );
+                    }
+                    else{
+                      return buildPermissionSheet();
+                    }
+                  }),
+
+                  SizedBox(height: size.height * 0.03),
+
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      Column(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              minimumSize: const Size(125,35),
+                              maximumSize: const Size(125,35),
+                            ),
+                            onPressed:() => {
+                              Navigator.push(context, MaterialPageRoute(builder: (context) => Navigation()))
                             },
-                            child:Row(
+                            child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Text('Logout'),
+                                Text('Route'),
                                 SizedBox(
                                   width: 5,
                                 ),
                                 Icon(
-                                  Icons.logout,
+                                  Icons.location_on_outlined,
                                   size: 24.0,
                                 ),
                               ],
                             ),
+                            // style: ElevatedButton.styleFrom(
+                            //   minimumSize: ,
+                            //   maximumSize: ,
+                            // ),
                           ),
                         ]
 
-                    ),
-                  ],
-                ),
-              ],
-            )
+                      ),
+                      Column(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              minimumSize: const Size(125,35),
+                              maximumSize: const Size(125,35),
+                            ),
+                            onPressed:() => {
+                              Navigator.push(context, MaterialPageRoute(builder: (context) => Compass()))
+                            },
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text('Compass'),
+                                SizedBox(
+                                  width: 5,
+                                ),
+                                Icon(
+                                  Icons.explore_outlined,
+                                  size: 24.0,
+                                ),
+                              ],
+                            )
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+
+                  SizedBox(height: size.height * 0.03),
+
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      Column(
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          children: [
+                            ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                minimumSize: const Size(125,35),
+                                maximumSize: const Size(125,35),
+                              ),
+                              onPressed:() => {
+                                Navigator.push(context, MaterialPageRoute(builder: (context) => Sensors()))
+                              },
+                              child:Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text('Sensors'),
+                                  SizedBox(
+                                    width: 5,
+                                  ),
+                                  Icon(
+                                    Icons.sensors_outlined,
+                                    size: 24.0,
+                                  ),
+                                ],
+                              )
+                            ),
+                          ]
+
+                      ),
+                      Column(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              minimumSize: const Size(125,35),
+                              maximumSize: const Size(125,35),
+                            ),
+                            onPressed: () => {
+                              Navigator.push(context, MaterialPageRoute(builder: (context) => Settings()))
+                            },
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text('Settings'),
+                                SizedBox(
+                                  width: 5,
+                                ),
+                                Icon(
+                                  Icons.settings,
+                                  size: 24.0,
+                                ),
+                              ],
+                            )
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+
+                  SizedBox(height: size.height * 0.03),
+
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      Column(
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          children: [
+                            ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                minimumSize: const Size(125,35),
+                                maximumSize: const Size(125,35),
+                              ),
+                              onPressed:() => {
+                                showDialog(context: context, builder: (context) => AlertDialog(
+                                  title: Text('Logout'),
+                                  content: Text('Are you sure you want to exit?'),
+                                  actions: [
+                                    ElevatedButton(onPressed: () => {
+                                      Navigator.pop(context)
+                                    },child: Text('No')),
+                                    ElevatedButton(onPressed: () async {
+                                      await StartScreen().stopForegroundTask();
+                                      //await LoginState().db.close();
+                                      var box = Hive.box('user');
+                                      box.delete('email');
+                                      box.delete('pass');
+                                      Navigator.push(context, MaterialPageRoute(builder: (context) => Login()));
+                                    }, child: Text('Yes'))
+                                  ],
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.0)),
+                                ),
+                                  barrierDismissible: false,
+                                ),
+                              },
+                              child:Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text('Logout'),
+                                  SizedBox(
+                                    width: 5,
+                                  ),
+                                  Icon(
+                                    Icons.logout,
+                                    size: 24.0,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ]
+
+                      ),
+                    ],
+                  ),
+                ],
+              )
+            ),
           ),
         ),
       ),
