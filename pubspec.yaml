@@ -58,7 +58,7 @@ dependencies:
   provider: ^6.0.2
   cached_network_image: ^3.2.0
   flutter_cache_manager: ^3.3.0
-  flutter_foreground_task: ^3.7.3
+  flutter_foreground_task: ^3.8.1
   mongo_dart: ^0.7.4
   hive: ^2.0.6
   hive_flutter: ^1.1.0
