@@ -27,6 +27,9 @@ class _CompassState extends State<Compass> {
   Timer ?timer;
   var box = Hive.box('user'),lat, lng;
   int art = 5;//art for altitude sampling rate
+  //Date for using date in the database
+  int date = 0;
+
 
 
   @override
@@ -102,7 +105,8 @@ class _CompassState extends State<Compass> {
   }
 
   void insert_altitude_toDb() async{
-    await SqlDatabase.instance.insert_altitude("'${NavigationState().date}'",Altitude,0);
+    date = DateTime.now().millisecondsSinceEpoch;
+    await SqlDatabase.instance.insert_altitude(date,Altitude,0);
     print('KOMPLE TO ALT');
   }
 

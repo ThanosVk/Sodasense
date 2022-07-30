@@ -33,6 +33,9 @@ class _SensorsState extends State<Sensors> {
   bool press_check = false, prox_check = false, acc_check = false, gyro_check = false, magn_check = false;
   var box = Hive.box('user');
   var color;//color for setting the color of the icons on dark and light theme
+  //Date for using date in the database
+  int date = 0;
+
 
   static const press_channel = MethodChannel('pressure_sensor');
   static const prox_channel = MethodChannel('proximity_channel');
@@ -267,31 +270,36 @@ class _SensorsState extends State<Sensors> {
 
   //function for inserting to the database the pressure data
   void insert_pressure_toDb() async{
-    await SqlDatabase.instance.insert_pressure("'${NavigationState().date}'",pressure,0);
+    date = DateTime.now().millisecondsSinceEpoch;
+    await SqlDatabase.instance.insert_pressure(date,pressure,0);
     //print('KOMPLE TO PRESS');
   }
 
   //function for inserting to the database the acceleration data
   void insert_acc_toDb() async{
-    await SqlDatabase.instance.insert_acc("'${NavigationState().date}'", ax, ay, az, 0);
+    date = DateTime.now().millisecondsSinceEpoch;
+    await SqlDatabase.instance.insert_acc(date, ax, ay, az, 0);
     //print('KOMPLE TO ACC');
   }
 
   //function for inserting to the database the gyroscope data
   void insert_gyro_toDb() async{
-    await SqlDatabase.instance.insert_gyro("'${NavigationState().date}'", gx, gy, gz, 0);
+    date = DateTime.now().millisecondsSinceEpoch;
+    await SqlDatabase.instance.insert_gyro(date, gx, gy, gz, 0);
     //print('KOMPLE TO GYRO');
   }
 
   //function for inserting to the database the magnetometer data
   void insert_magn_toDb() async{
-    await SqlDatabase.instance.insert_magn("'${NavigationState().date}'",mx,my,mz,0);
+    date = DateTime.now().millisecondsSinceEpoch;
+    await SqlDatabase.instance.insert_magn(date,mx,my,mz,0);
     //print('KOMPLE TO MAGN');
   }
 
   //function for inserting to the database the proximity data
   void insert_prox_toDb() async{
-    await SqlDatabase.instance.insert_prox("'${NavigationState().date}'", "$nmsg", 0);
+    date = DateTime.now().millisecondsSinceEpoch;
+    await SqlDatabase.instance.insert_prox(date, "$nmsg", 0);
     //print('KOMPLE TO PROX');
   }
 

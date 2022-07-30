@@ -62,8 +62,10 @@ class NavigationState extends State<Navigation> {
 
   loc.Location location = new loc.Location();
 
-  //Date for using is in the database
-  String date = DateFormat('dd-MM-yyyy-HH-mm-ss').format(DateTime.now());
+  //Date for using date in the database
+  int date = 0;
+
+  // String date = DateFormat('dd-MM-yyyy-HH-mm-ss').format(DateTime.now());
 
   //Date for showing in the map
   String date_show = DateFormat('HH-mm,dd-MMMM-yyyy').format(DateTime.now());
@@ -76,7 +78,10 @@ class NavigationState extends State<Navigation> {
 
   DateTimeRange? _dateRange;
 
-  String date_start='', date_end='';
+  String date_end='';
+  int sl_date=0, prsd_btn_first=0, prsd_btn_second=0;
+
+  DateTime? selected_date,selected_date_second;
 
   List<List> faw = [];
 
@@ -228,8 +233,20 @@ class NavigationState extends State<Navigation> {
     }
   }
 
-  getCoordinates(int x, String dt_st, String dt_ed) async{
-    List<Map> lista = await SqlDatabase.instance.select_coor(x,dt_st,dt_ed);
+  //getCoordinates for getting the coordinates points from the first date picker
+  getCoordinates(int x, int dt_st,) async{
+    List<Map> lista = await SqlDatabase.instance.select_coor_first(x,dt_st);
+    //int ff = await SqlDatabase.instance.select_coor();
+    polylineCoordinates = [];
+    //print('I lista einai $polylineCoordinates');
+    for(int i=0;i<lista.length;i++){
+      polylineCoordinates.add(LatLng(lista[i]['lat'], lista[i]['lng']));
+    }
+  }
+
+  //getCoordinatesSecond for getting the cordinates points from the second date picker
+  getCoordinatesSecond(int x, int dt_st,) async{
+    List<Map> lista = await SqlDatabase.instance.select_coor_second(x,dt_st);
     //int ff = await SqlDatabase.instance.select_coor();
     polylineCoordinates = [];
     //print('I lista einai $polylineCoordinates');
@@ -240,32 +257,69 @@ class NavigationState extends State<Navigation> {
 
   void insert_toDb() async{
     if(lat!=0.0 && lng!=0.0){
-      await SqlDatabase.instance.insert_coor("'$date'",lat,lng,0);
+      date = DateTime.now().millisecondsSinceEpoch;
+      await SqlDatabase.instance.insert_coor(date,lat,lng,0);
     }
     // print('has inserted somethinggggggggggggggggg');
   }
 
-  Future pickDateRange(BuildContext context) async {
-    final initialDateRange = DateTimeRange(
-      start: DateTime.now(),
-      end: DateTime.now().add(Duration(hours: 24 * 2)),
-    );
-    final newDateRange = await showDateRangePicker(
+  Future pickDate(BuildContext context) async{
+    final initialDate = DateTime.now();
+    final newDate = await showDatePicker(
       context: context,
+      initialDate: selected_date ?? initialDate,
       firstDate: DateTime(DateTime.now().year - 5),
       lastDate: DateTime(DateTime.now().year + 5),
-      initialDateRange: _dateRange ?? initialDateRange,
     );
 
-    if (newDateRange == null) return;
+    if (newDate == null) return;
 
-    setState(() =>{
-      _dateRange = newDateRange,
-      date_start = DateFormat('dd-MM-yyyy').format(_dateRange!.start),
-      date_end = DateFormat('dd-MM-yyyy').format(_dateRange!.end),
-      // print('ELAAAAAAAAAAAAA $date_start, $date_end'),
+    setState(() => {
+      selected_date = newDate,
+      sl_date = selected_date!.millisecondsSinceEpoch
     });
+    print('I imerominia pou dialexes einai $sl_date');
   }
+
+  Future pickDateSecond(BuildContext context) async{
+    final initialDate = DateTime.now();
+    final newDate = await showDatePicker(
+      context: context,
+      initialDate: selected_date_second ?? initialDate,
+      firstDate: DateTime(DateTime.now().year - 5),
+      lastDate: DateTime(DateTime.now().year + 5),
+    );
+
+    if (newDate == null) return;
+
+    setState(() => {
+      selected_date_second = newDate,
+      sl_date = selected_date_second!.millisecondsSinceEpoch
+    });
+    print('I imerominia pou dialexes einai $sl_date');
+  }
+
+  // Future pickDateRange(BuildContext context) async {
+  //   final initialDateRange = DateTimeRange(
+  //     start: DateTime.now(),
+  //     end: DateTime.now().add(Duration(hours: 24 * 2)),
+  //   );
+  //   final newDateRange = await showDateRangePicker(
+  //     context: context,
+  //     firstDate: DateTime(DateTime.now().year - 5),
+  //     lastDate: DateTime(DateTime.now().year + 5),
+  //     initialDateRange: _dateRange ?? initialDateRange,
+  //   );
+  //
+  //   if (newDateRange == null) return;
+  //
+  //   setState(() =>{
+  //     _dateRange = newDateRange,
+  //     date_start = DateFormat('dd-MM-yyyy').format(_dateRange!.start),
+  //     date_end = DateFormat('dd-MM-yyyy').format(_dateRange!.end),
+  //     // print('ELAAAAAAAAAAAAA $date_start, $date_end'),
+  //   });
+  // }
 
   double getDistance() {
     double tmp_distance = 0;
@@ -470,34 +524,41 @@ class NavigationState extends State<Navigation> {
                                               ],
                                             ),
                                             SizedBox(height: 16),
-                                            Text('Set the start and the ending dates'),
-                                            Row(
-                                              children: [
-                                                Expanded(
-                                                  child: ElevatedButton(
-                                                    onPressed: () => pickDateRange(context),
-                                                    child: _dateRange == null ? Text('From') : Text(DateFormat('dd-MM-yyyy').format(_dateRange!.start)),
-                                                  ),
-                                                ),
-                                                const SizedBox(width: 8),
-                                                Icon(Icons.arrow_forward, color: Colors.white),
-                                                const SizedBox(width: 8),
-                                                Expanded(
-                                                  child: ElevatedButton(
-                                                    onPressed: () => pickDateRange(context),
-                                                    child: _dateRange == null ? Text('Until') : Text(DateFormat('dd-MM-yyyy').format(_dateRange!.end)),
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                            Text('Or press the button below to see the route today'),
+                                            Text('and the start date to show on map'),
                                             ElevatedButton(
-                                              onPressed: () => {
-                                                date_start = DateFormat('dd-MM-yyyy').format(DateTime.now()),
-                                                date_end = DateFormat('dd-MM-yyyy').format(DateTime.now()),
-                                                print('$date_start, $date_end')
+                                              onPressed: () {
+                                                pickDate(context);
+                                                prsd_btn_first = 1;
                                               },
-                                              child: Text('Today route')
+                                              child: selected_date == null ? Text('Select Date') : Text('${selected_date?.day}/${selected_date?.month}/${selected_date?.year}')
+                                            ),
+                                            // Row(
+                                            //   children: [
+                                            //     Expanded(
+                                            //       child: ElevatedButton(
+                                            //         onPressed: () => pickDateRange(context),
+                                            //         child: _dateRange == null ? Text('From') : Text(DateFormat('dd-MM-yyyy').format(_dateRange!.start)),
+                                            //       ),
+                                            //     ),
+                                            //     const SizedBox(width: 8),
+                                            //     Icon(Icons.arrow_forward, color: Colors.white),
+                                            //     const SizedBox(width: 8),
+                                            //     Expanded(
+                                            //       child: ElevatedButton(
+                                            //         onPressed: () => pickDateRange(context),
+                                            //         child: _dateRange == null ? Text('Until') : Text(DateFormat('dd-MM-yyyy').format(_dateRange!.end)),
+                                            //       ),
+                                            //     ),
+                                            //   ],
+                                            // ),
+                                            Text('Or press the button below to select a specific day'),
+                                            ElevatedButton(
+                                              onPressed: () {
+                                                pickDateSecond(context);
+                                                selected_date_second = selected_date;
+                                                prsd_btn_second = 1;
+                                              },
+                                              child: selected_date_second == null ? Text('Select Date') : Text('${selected_date_second?.day}/${selected_date_second?.month}/${selected_date_second?.year}'),
                                             )
                                           ],
                                         ),
@@ -506,22 +567,45 @@ class NavigationState extends State<Navigation> {
                                     actions: [
                                       ElevatedButton(
                                         onPressed: () async {
-                                          print('$date_start, $date_end');
-                                          if(date_start =='' || date_end ==''){
+                                          if((selected_date == '' || selected_date == null) && (selected_date_second == '' || selected_date_second == null)){
                                             Fluttertoast.showToast(msg: 'Please select a date', toastLength: Toast.LENGTH_SHORT,gravity: ToastGravity.BOTTOM);
                                           }
                                           else{
-                                            if(coor_points > 2000){
-                                              Fluttertoast.showToast(msg: 'Select more than 2000 points only if you have high-end device', toastLength: Toast.LENGTH_LONG,gravity: ToastGravity.BOTTOM);
+                                            if(prsd_btn_first == 1){
+                                              if(coor_points > 2000){
+                                                Fluttertoast.showToast(msg: 'Select more than 2000 points only if you have high-end device', toastLength: Toast.LENGTH_LONG,gravity: ToastGravity.BOTTOM);
+                                              }
+                                              await getCoordinates(coor_points.toInt(),sl_date);
+                                              int total_count_points = await SqlDatabase.instance.select_coor_first_count(coor_points.toInt(),sl_date);
+                                              if(total_count_points == 0){
+                                                Fluttertoast.showToast(msg: 'Selected date does not have saved points', toastLength: Toast.LENGTH_LONG,gravity: ToastGravity.BOTTOM);
+                                                return;
+                                              }
+                                              prsd_btn_first = 0;
+                                              print('Patithike TO PROTO KOUMPI');
+                                              print('O arithmos tis listas einai $total_count_points');
                                             }
-                                            await getCoordinates(coor_points.toInt(),date_start,date_end);
+                                            else if (prsd_btn_second == 1){
+                                              await getCoordinatesSecond(coor_points.toInt(),sl_date);
+                                              int total_count_points_second = await SqlDatabase.instance.select_coor_second_count(coor_points.toInt(),sl_date);
+                                              if(total_count_points_second == 0){
+                                                Fluttertoast.showToast(msg: 'Selected date does not have saved points', toastLength: Toast.LENGTH_LONG,gravity: ToastGravity.BOTTOM);
+                                                return;
+                                              }
+                                              else if(total_count_points_second > 2000){
+                                                Fluttertoast.showToast(msg: 'Showing only the first 2000 points', toastLength: Toast.LENGTH_LONG,gravity: ToastGravity.BOTTOM);
+                                              }
+                                              prsd_btn_second = 0;
+                                              print('Patithike TO DEYTERO KOUMPI');
+                                              print('O arithmos tis listas einai $total_count_points_second');
+                                            }
                                             if(polylineCoordinates.isNotEmpty){
                                               setState(() {
                                                 distance = getDistance();
                                               });
                                             }
-                                            // print('EDOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO $_dateRange'),
-                                            // print('$date_start,$date_end'),
+                                            //print('EDOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO $_dateRange'),
+                                            //print('$date_start,$date_end'),
                                             Navigator.pop(context,coor_points);
                                           }
                                         },

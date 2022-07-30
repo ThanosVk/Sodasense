@@ -174,7 +174,11 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver{
   bool height_validate=true;// height_validate for height validate textfield
   late List<bool> isSelected = [true, false];//isSelected for gender toggle buttons
   User user = new User();
-  String date = DateFormat('dd-MM-yyyy-HH-mm-ss').format(DateTime.now());
+
+  // String date = DateFormat('dd-MM-yyyy-HH-mm-ss').format(DateTime.now());
+  //Date for using date in the database
+  int date = 0;
+
   String date_once = DateFormat('dd-MM-yyyy').format(DateTime.now());
 
   ConnectivityResult connectionStatus = ConnectivityResult.none;
@@ -221,24 +225,45 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver{
     // You can save data using the saveData function.
     await FlutterForegroundTask.saveData(key: 'customData', value: 'hello');
 
-    ReceivePort? receivePort;
+    bool reqResult;
     if (await FlutterForegroundTask.isRunningService) {
-      receivePort = await FlutterForegroundTask.restartService();
+      reqResult = await FlutterForegroundTask.restartService();
     } else {
-      receivePort = await FlutterForegroundTask.startService(
+      reqResult = await FlutterForegroundTask.startService(
         notificationTitle: 'App is running on the background',
         notificationText: 'Tap to return to the app',
         callback: startCallback,
       );
     }
 
+    ReceivePort? receivePort;
+    if (reqResult) {
+      receivePort = await FlutterForegroundTask.receivePort;
+    }
+
+    return _registerReceivePort(receivePort);
+
+  }
+
+
+  Future<bool> stopForegroundTask() async {
+    return await FlutterForegroundTask.stopService();
+  }
+
+  bool _registerReceivePort(ReceivePort? receivePort) {
+    closeReceivePort();
+
     if (receivePort != null) {
       _receivePort = receivePort;
       _receivePort?.listen((message) {
-        if (message is DateTime) {
-          print('receive timestamp: $message');
-        } else if (message is int) {
-          print('receive updateCount: $message');
+        if (message is int) {
+          // print('eventCount: $message');
+        } else if (message is String) {
+          if (message == 'onNotificationPressed') {
+            Navigator.of(context).pushNamed('/resume-route');
+          }
+        } else if (message is DateTime) {
+          print('timestamp: ${message.toString()}');
         }
       });
 
@@ -248,9 +273,12 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver{
     return false;
   }
 
-  Future<bool> stopForegroundTask() async {
-    return await FlutterForegroundTask.stopService();
+  void closeReceivePort() {
+    _receivePort?.close();
+    _receivePort = null;
   }
+
+  T? _ambiguate<T>(T? value) => value;
 
   //For getting steps from stepController
   int stepscount(){
@@ -298,7 +326,7 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver{
 
     stepController.dispose();
     heightController.dispose();
-    _receivePort?.close();
+    closeReceivePort();
 
     //Hive.close(); den xreiazetai aparaitita
 
@@ -407,7 +435,8 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver{
 
   insert_toDb() async{
     int stp = box.get('today_steps');
-    await SqlDatabase.instance.insert_daily_steps("'$date'",stp,0);
+    date = DateTime.now().millisecondsSinceEpoch;
+    await SqlDatabase.instance.insert_daily_steps(date,stp,0);
     List<Map> lista = await SqlDatabase.instance.select_daily_steps();
     print(lista);
   }
