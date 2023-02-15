@@ -1,15 +1,17 @@
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:hive/hive.dart';
 import 'package:internet_connection_checker/internet_connection_checker.dart';
 import 'package:thesis/Login.dart';
 import 'package:thesis/main.dart';
 import 'package:email_validator/email_validator.dart';
 import 'package:fluttertoast/fluttertoast.dart';
-import 'package:mongo_dart/mongo_dart.dart' as mongo;
+// import 'package:mongo_dart/mongo_dart.dart' as mongo;
 import 'dart:math';
 import 'dart:convert';
 import 'package:crypto/crypto.dart';
+import 'package:http/http.dart' as http;
 
 class Signup extends StatefulWidget {
   const Signup({Key? key}) : super(key: key);
@@ -123,12 +125,12 @@ class SignupState extends State<Signup> {
     }
     else if(pass_txtController.text.isEmpty==false){
       if(pass_txtController.text.length < 10 || pass_txtController.text.contains(new RegExp(r'(?=.*[!@#$%^&*])')) == false){
-        pass_msg='Password must be at least 10 letters\nand contain special characters';
+        pass_msg='Password must be at least 10 letters\nand contain special characters (!@#\$%^&*)';
         pass_check=false;
         return pass_msg;
       }
       else if(pass_txtController.text.length > 16 || pass_txtController.text.contains(new RegExp(r'(?=.*[!@#$%^&*])')) == false){
-        pass_msg='Password must be maximum 16 letters\nand contain special characters';
+        pass_msg='Password must be maximum 16 letters\nand contain special characters (!@#\$%^&*)';
         pass_check=false;
         return pass_msg;
       }
@@ -347,27 +349,81 @@ class SignupState extends State<Signup> {
                         Fluttertoast.showToast(msg: 'Please check your credentials',toastLength: Toast.LENGTH_SHORT,gravity: ToastGravity.BOTTOM);
                       }
                       else{
-                        mongo.Db db = mongo.Db('mongodb://10.0.2.2:27017/App');
-                        await db.open();
-                        mongo.DbCollection users = db.collection('users');
-                        print('Connected to database!');
-                        var rand = Random.secure();//Generate a random salt
-                        var saltBytes = List<int>.generate(32, (_) => rand.nextInt(256));//Generates a list of 32 integers between 0 and 256
-                        var salt = base64.encode(saltBytes);//Convertion of list to a base64 string
-                        String hashed_pass = HashPassword(pass_txtController.text, salt);
-                        var existing_mail = await users.findOne(mongo.where.eq('e-mail',mail_txtController.text));
-                        if(existing_mail?.containsValue(mail_txtController.text) == true){
-                          Fluttertoast.showToast(msg: 'E-mail already exists, please enter another', toastLength: Toast.LENGTH_SHORT,gravity: ToastGravity.BOTTOM);
-                        }
-                        else{
-                          await users.insertOne({
-                            'username': user_txtController.text,
-                            'e-mail' : mail_txtController.text,
-                            'Hashed password': hashed_pass,
-                            'Salt':salt
-                          });
-                          Navigator.push(context, MaterialPageRoute(builder: (context) => MyHomePage()));
-                        }
+                        // mongo.Db db = mongo.Db('mongodb://10.0.2.2:27017/App');
+                        // await db.open();
+                        // mongo.DbCollection users = db.collection('users');
+                        // print('Connected to database!');
+                        // var rand = Random.secure();//Generate a random salt
+                        // var saltBytes = List<int>.generate(32, (_) => rand.nextInt(256));//Generates a list of 32 integers between 0 and 256
+                        // var salt = base64.encode(saltBytes);//Convertion of list to a base64 string
+                        // String hashed_pass = HashPassword(pass_txtController.text, salt);
+                        // var existing_mail = await users.findOne(mongo.where.eq('e-mail',mail_txtController.text));
+                        // if(existing_mail?.containsValue(mail_txtController.text) == true){
+                        //   Fluttertoast.showToast(msg: 'E-mail already exists, please enter another', toastLength: Toast.LENGTH_SHORT,gravity: ToastGravity.BOTTOM);
+                        // }
+                        // else{
+                        //   await users.insertOne({
+                        //     'username': user_txtController.text,
+                        //     'e-mail' : mail_txtController.text,
+                        //     'Hashed password': hashed_pass,
+                        //     'Salt':salt
+                        //   });
+                          var response = await http.post(Uri.parse('https://api.sodasense.uop.gr/v1/userRegister'),
+                            body: jsonEncode(<String, String>{
+                              "email":mail_txtController.text,
+                              "username":user_txtController.text,
+                              "lastname":user_txtController.text,
+                              "firstname":user_txtController.text,
+                              "password":pass_txtController.text
+                          }));
+                          print('Status code: ${response.statusCode}');
+                          print('Response body: ${response.body}');
+                          print('Reason phrase: ${response.reasonPhrase}');
+                          if(response.body.contains('User exists with same username') == true){
+                            print('Unsuccessful registration!!');
+                            Fluttertoast.showToast(msg: 'Username already in use', toastLength: Toast.LENGTH_SHORT,gravity: ToastGravity.BOTTOM);
+                          }
+                          else if(response.body.contains('User exists with same email') == true){
+                            print('Unsuccessful registration!!');
+                            Fluttertoast.showToast(msg: 'Email already in use', toastLength: Toast.LENGTH_SHORT,gravity: ToastGravity.BOTTOM);
+                          }
+                          else if(response.statusCode == 200 && response.reasonPhrase == 'OK' && response.body.contains('User exists with same username') == false && response.body.contains('User exists with same email') == false){
+                            print('Successful registration!!');
+
+                            var responsee= await http.post(Uri.parse('https://api.sodasense.uop.gr/v1/userLogin'),
+                                body: jsonEncode(<String, String>{
+                                  "username": mail_txtController.text,
+                                  "password": pass_txtController.text
+                                }));
+
+                            var box = Hive.box('user');
+                            var token_parts = responsee.body.split('.');
+                            Map<String, dynamic> map = jsonDecode(responsee.body);
+                            // print(map);
+                            String access_token = map['access_token'].toString();
+                            // print(access_token);
+                            //Base64 requires string multiple of 4 in order to have 0 remainder with mod division
+                            if(token_parts[1].length % 4 == 1){
+                              token_parts[1] = token_parts[1] + '===';
+                            }
+                            else if(token_parts[1].length % 4 == 2){
+                              token_parts[1] = token_parts[1] + '==';
+                            }
+                            else if(token_parts[1].length % 4 == 3){
+                              token_parts[1] = token_parts[1] + '=';
+                            }
+                            var jsontext = base64.decode(token_parts[1]);
+                            Map<String,dynamic> decoded_token= jsonDecode(utf8.decode(jsontext));
+
+                            // print(decoded_token);
+                            await box.put('email',mail_txtController.text);
+                            await box.put('pass',pass_txtController.text);
+                            await box.put('userid', decoded_token['sub']);
+                            await box.put('access_token', access_token);
+
+                            Navigator.push(context, MaterialPageRoute(builder: (context) => MyHomePage()));
+                          }
+                        // }
                       }
                     }
                     else{

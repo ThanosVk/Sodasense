@@ -21,7 +21,7 @@ class Sidemenu extends StatelessWidget {
         padding: EdgeInsets.zero,
         children: [
           UserAccountsDrawerHeader(
-              accountName: Text('tns',style: TextStyle(color: Colors.white)),
+              accountName: Text('',style: TextStyle(color: Colors.white)),
               accountEmail: Text('${box.get('email')}',style: TextStyle(color: Colors.white)),
             currentAccountPicture: CircleAvatar(
               child: ClipOval(
@@ -84,6 +84,8 @@ class Sidemenu extends StatelessWidget {
                     var box = Hive.box('user');
                     box.delete('email');
                     box.delete('pass');
+                    box.delete('access_token');
+                    box.delete('userid');
                     Navigator.push(context, MaterialPageRoute(builder: (context) => Login()));
                   }, child: Text('Yes'))
                 ],

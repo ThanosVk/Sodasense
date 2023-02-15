@@ -338,7 +338,7 @@ class NavigationState extends State<Navigation> {
     return Scaffold(
           drawer: Sidemenu(),
           appBar: AppBar(
-            title:Text("Navigation"),
+            title:Text("Route"),
             systemOverlayStyle: SystemUiOverlayStyle(statusBarColor: Colors.cyan)
           ),
           body: SafeArea(

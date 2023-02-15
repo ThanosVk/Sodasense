@@ -72,6 +72,10 @@ class SqlDatabase{
         'CREATE TABLE daily_steps (id INTEGER PRIMARY KEY AUTOINCREMENT, date INTEGER, steps INTEGER, updated INTEGER)'
     );
 
+    //creation of sensors table
+    await db.execute(
+        'CREATE TABLE sensors (id INTEGER PRIMARY KEY AUTOINCREMENT, date INTEGER, pressure REAL, acc_x REAL, acc_y REAL, acc_z REAL,gyro_x REAL, gyro_y REAL, gyro_z REAL,magn_x REAL, magn_y REAL, magn_z REAL, dist TEXT,steps INTEGER, updated INTEGER)'
+    );
   }
 
   Future insert_coor(int date, double lat, double lng, int updated) async{
@@ -130,6 +134,12 @@ class SqlDatabase{
 
   }
 
+  Future insert_sensors(int date, double pressure, double acc_x, double acc_y, double acc_z,double gyro_x, double gyro_y, double gyro_z,double magn_x, double magn_y, double magn_z, String dist, int steps, int updated) async{
+    final db = await instance.database;
+
+    await db.rawInsert('INSERT INTO sensors(date, pressure, acc_x, acc_y, acc_z,gyro_x, gyro_y, gyro_z,magn_x, magn_y, magn_z, dist,steps, updated) VALUES($date, $pressure,$acc_x,$acc_y,$acc_z,$gyro_x,$gyro_y,$gyro_z,$magn_x,$magn_y,$magn_z,$dist,$steps,$updated)');
+  }
+
   //For selecting the coordinates by number of points and by a specific date and after
   Future select_coor_first(int x, int dt_st) async{
     
@@ -183,7 +193,7 @@ class SqlDatabase{
     return result;
   }
 
-  //For counting the number of entries in db of the select_coor_first
+  //For counting the number of entries in db of the select_coor_second
   Future select_coor_second_count(int x, int dt_st) async{
 
     int z = dt_st + 86399000;
@@ -286,6 +296,18 @@ class SqlDatabase{
     return result;
   }
 
+  Future select_sensors() async{
+
+    final db = await instance.database;
+
+    final result =  await db.rawQuery('SELECT pressure, acc_x, acc_y, acc_z,gyro_x, gyro_y, gyro_z,magn_x, magn_y, magn_z, dist,steps, updated FROM sensors');
+
+    //int? count = Sqflite.firstIntValue(await db.rawQuery('SELECT COUNT(*) FROM coordinates'));
+
+
+    return result;
+  }
+
   Future sum_daily_steps() async{
 
     final db = await instance.database;
@@ -294,6 +316,105 @@ class SqlDatabase{
 
     //int? count = Sqflite.firstIntValue(await db.rawQuery('SELECT COUNT(*) FROM coordinates'));
 
+
+    return result;
+  }
+
+  Future select_altitude_unupdated() async{
+
+    final db = await instance.database;
+
+    final result =  await db.rawQuery('SELECT date,altitude FROM altitude WHERE updated = 0');
+    
+    await db.rawUpdate('UPDATE altitude SET updated = 1 WHERE updated = 0');
+
+    return result;
+  }
+
+  Future select_pressure_unupdated() async{
+
+    final db = await instance.database;
+
+    final result =  await db.rawQuery('SELECT date,pressure FROM pressure WHERE updated = 0');
+
+    // await db.rawUpdate('UPDATE pressure SET updated = 1 WHERE updated = 0');
+
+    return result;
+  }
+
+  Future select_acc_unupdated() async{
+
+    final db = await instance.database;
+
+    final result =  await db.rawQuery('SELECT date,x,y,z FROM acceleration WHERE updated = 0');
+
+    // await db.rawUpdate('UPDATE accelaration SET updated = 1 WHERE updated = 0');
+
+    return result;
+  }
+
+  Future select_gyro_unupdated() async{
+
+    final db = await instance.database;
+
+    final result =  await db.rawQuery('SELECT date,x,y,z FROM gyroscope WHERE updated = 0');
+
+    // await db.rawUpdate('UPDATE gyroscope SET updated = 1 WHERE updated = 0');
+
+    return result;
+  }
+
+  Future select_magn_unupdated() async{
+
+    final db = await instance.database;
+
+    final result =  await db.rawQuery('SELECT date,x,y,z FROM magnetometer WHERE updated = 0');
+
+    // await db.rawUpdate('UPDATE magnetometer SET updated = 1 WHERE updated = 0');
+
+    return result;
+  }
+
+  Future select_prox_unupdated() async{
+
+    final db = await instance.database;
+
+    final result =  await db.rawQuery('SELECT date,dist FROM proximity WHERE updated = 0');
+
+    // await db.rawUpdate('UPDATE proximity SET updated = 1 WHERE updated = 0');
+
+    return result;
+  }
+
+  Future select_daily_steps_unupdated() async{
+
+    final db = await instance.database;
+
+    final result =  await db.rawQuery('SELECT date,steps FROM daily_steps WHERE updated = 0');
+
+    await db.rawUpdate('UPDATE daily_steps SET updated = 1 WHERE updated = 0');
+
+    return result;
+  }
+
+  Future select_coor_unupdated() async{
+
+    final db = await instance.database;
+
+    final result =  await db.rawQuery('SELECT date,lat,lng FROM coordinates WHERE updated = 0');
+
+    await db.rawUpdate('UPDATE coordinates SET updated = 1 WHERE updated = 0');
+
+    return result;
+  }
+
+  Future select_sensors_unupdated() async{
+
+    final db = await instance.database;
+
+    final result =  await db.rawQuery('SELECT date, pressure,acc_x,acc_y,acc_z,gyro_x,gyro_y,gyro_z,magn_x,magn_y,magn_z,dist,steps FROM sensors WHERE updated = 0');
+
+    await db.rawUpdate('UPDATE sensors SET updated = 1 WHERE updated = 0');
 
     return result;
   }

@@ -34,19 +34,19 @@ class _SensorsState extends State<Sensors> {
   var box = Hive.box('user');
   var color;//color for setting the color of the icons on dark and light theme
   //Date for using date in the database
-  int date = 0;
+  // int date = 0;
 
 
-  static const press_channel = MethodChannel('pressure_sensor');
-  static const prox_channel = MethodChannel('proximity_channel');
-  static const acc_channel = MethodChannel('accelerometer_channel');
-  static const gyro_channel = MethodChannel('gyroscope_channel');
-  static const magn_channel = MethodChannel('magnetometer_channel');
+  // static const press_channel = MethodChannel('pressure_sensor');
+  // static const prox_channel = MethodChannel('proximity_channel');
+  // static const acc_channel = MethodChannel('accelerometer_channel');
+  // static const gyro_channel = MethodChannel('gyroscope_channel');
+  // static const magn_channel = MethodChannel('magnetometer_channel');
+  //
+  // static const pressure_channel = EventChannel('pressure_channel');//Channel for comunicating with android
+  // StreamSubscription? pressureSubscription;
 
-  static const pressure_channel = EventChannel('pressure_channel');//Channel for comunicating with android
-  StreamSubscription? pressureSubscription;
-
-  Timer ?timer,timer_acc,timer_gyro,timer_magn,timer_press,timer_prox;
+  // Timer ?timer,timer_acc,timer_gyro,timer_magn,timer_press,timer_prox;
 
   @override
   void initState() {
@@ -111,7 +111,7 @@ class _SensorsState extends State<Sensors> {
     listenSensor();
 
     //pressure initialization event
-    pressureSubscription = pressure_channel.receiveBroadcastStream().listen((event) {
+    StartScreen().pressureSubscription = StartScreen.pressure_channel.receiveBroadcastStream().listen((event) {
       print('Mpike stin sun');
       setState(() {
         if(press_check == true){
@@ -131,29 +131,29 @@ class _SensorsState extends State<Sensors> {
       });
     });
 
-    if(box.get('sensors_sr')!=null){
-      srt = box.get('sensors_sr');
-    }
-    timer = Timer.periodic(Duration(seconds: srt), (Timer t) {
-
-      if(acc_check == true){
-        insert_acc_toDb();
-      }
-      if(gyro_check == true){
-        insert_gyro_toDb();
-      }
-      if(magn_check == true){
-        insert_magn_toDb();
-      }
-      if(press_check == true){
-        insert_pressure_toDb();
-      }
-      if(prox_check == true){
-        insert_prox_toDb();
-      }
-      //check();
-
-    });
+    // if(box.get('sensors_sr')!=null){
+    //   srt = box.get('sensors_sr');
+    // }
+    // timer = Timer.periodic(Duration(seconds: srt), (Timer t) {
+    //
+    //   if(acc_check == true){
+    //     insert_acc_toDb();
+    //   }
+    //   if(gyro_check == true){
+    //     insert_gyro_toDb();
+    //   }
+    //   if(magn_check == true){
+    //     insert_magn_toDb();
+    //   }
+    //   if(press_check == true){
+    //     insert_pressure_toDb();
+    //   }
+    //   if(prox_check == true){
+    //     insert_prox_toDb();
+    //   }
+    //   //check();
+    //
+    // });
 
 
     setState(() {
@@ -199,7 +199,7 @@ class _SensorsState extends State<Sensors> {
   //Future for checking the availability of pressure sensor
   Future<void> check_pressure_availability() async {
     try {
-      var available = await press_channel.invokeMethod('isSensorAvailable');
+      var available = await StartScreen.press_channel.invokeMethod('isSensorAvailable');
       setState(() {
         press_check = available;
       });
@@ -214,7 +214,7 @@ class _SensorsState extends State<Sensors> {
       prox_check = true;
     }
     try {
-      var available = await prox_channel.invokeMethod('isSensorAvailable');
+      var available = await StartScreen.prox_channel.invokeMethod('isSensorAvailable');
       setState(() {
         prox_check = available;
       });
@@ -229,7 +229,7 @@ class _SensorsState extends State<Sensors> {
       acc_check = true;
     }
     try {
-      var available = await acc_channel.invokeMethod('isSensorAvailable');
+      var available = await StartScreen.acc_channel.invokeMethod('isSensorAvailable');
       setState(() {
         acc_check = available;
       });
@@ -244,7 +244,7 @@ class _SensorsState extends State<Sensors> {
       gyro_check = true;
     }
     try {
-      var available = await gyro_channel.invokeMethod('isSensorAvailable');
+      var available = await StartScreen.gyro_channel.invokeMethod('isSensorAvailable');
       setState(() {
         gyro_check = available;
       });
@@ -259,7 +259,7 @@ class _SensorsState extends State<Sensors> {
       magn_check = true;
     }
     try {
-      var available = await magn_channel.invokeMethod('isSensorAvailable');
+      var available = await StartScreen.magn_channel.invokeMethod('isSensorAvailable');
       setState(() {
         magn_check = available;
       });
@@ -268,40 +268,40 @@ class _SensorsState extends State<Sensors> {
     }
   }
 
-  //function for inserting to the database the pressure data
-  void insert_pressure_toDb() async{
-    date = DateTime.now().millisecondsSinceEpoch;
-    await SqlDatabase.instance.insert_pressure(date,pressure,0);
-    //print('KOMPLE TO PRESS');
-  }
-
-  //function for inserting to the database the acceleration data
-  void insert_acc_toDb() async{
-    date = DateTime.now().millisecondsSinceEpoch;
-    await SqlDatabase.instance.insert_acc(date, ax, ay, az, 0);
-    //print('KOMPLE TO ACC');
-  }
-
-  //function for inserting to the database the gyroscope data
-  void insert_gyro_toDb() async{
-    date = DateTime.now().millisecondsSinceEpoch;
-    await SqlDatabase.instance.insert_gyro(date, gx, gy, gz, 0);
-    //print('KOMPLE TO GYRO');
-  }
-
-  //function for inserting to the database the magnetometer data
-  void insert_magn_toDb() async{
-    date = DateTime.now().millisecondsSinceEpoch;
-    await SqlDatabase.instance.insert_magn(date,mx,my,mz,0);
-    //print('KOMPLE TO MAGN');
-  }
-
-  //function for inserting to the database the proximity data
-  void insert_prox_toDb() async{
-    date = DateTime.now().millisecondsSinceEpoch;
-    await SqlDatabase.instance.insert_prox(date, "$nmsg", 0);
-    //print('KOMPLE TO PROX');
-  }
+  // //function for inserting to the database the pressure data
+  // void insert_pressure_toDb() async{
+  //   date = DateTime.now().millisecondsSinceEpoch;
+  //   await SqlDatabase.instance.insert_pressure(date,pressure,0);
+  //   //print('KOMPLE TO PRESS');
+  // }
+  //
+  // //function for inserting to the database the acceleration data
+  // void insert_acc_toDb() async{
+  //   date = DateTime.now().millisecondsSinceEpoch;
+  //   await SqlDatabase.instance.insert_acc(date, ax, ay, az, 0);
+  //   //print('KOMPLE TO ACC');
+  // }
+  //
+  // //function for inserting to the database the gyroscope data
+  // void insert_gyro_toDb() async{
+  //   date = DateTime.now().millisecondsSinceEpoch;
+  //   await SqlDatabase.instance.insert_gyro(date, gx, gy, gz, 0);
+  //   //print('KOMPLE TO GYRO');
+  // }
+  //
+  // //function for inserting to the database the magnetometer data
+  // void insert_magn_toDb() async{
+  //   date = DateTime.now().millisecondsSinceEpoch;
+  //   await SqlDatabase.instance.insert_magn(date,mx,my,mz,0);
+  //   //print('KOMPLE TO MAGN');
+  // }
+  //
+  // //function for inserting to the database the proximity data
+  // void insert_prox_toDb() async{
+  //   date = DateTime.now().millisecondsSinceEpoch;
+  //   await SqlDatabase.instance.insert_prox(date, "$nmsg", 0);
+  //   //print('KOMPLE TO PROX');
+  // }
 
   void check() async{
     List<Map> lista = await SqlDatabase.instance.select_acc();

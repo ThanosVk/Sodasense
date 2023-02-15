@@ -169,22 +169,23 @@ class _CompassState extends State<Compass> {
                   SizedBox(height: size.height * 0.05),
                   buildCompass(),
                   Text('\n\n${angle.toStringAsFixed(0)}°'),
-                  RichText(
-                    text: TextSpan(
-                        style: const TextStyle(
-                          color: Colors.black,
-                        ),
+                  Text.rich(
+                    TextSpan(
+                        // style: const TextStyle(
+                        //   color: Colors.black,
+                        // ),
                       children: <TextSpan>[
                         TextSpan(text: 'Adrress: ',style: const TextStyle(fontWeight: FontWeight.bold)),
                         TextSpan(text: '$adr'),
                       ]
                     ),
+                    textAlign: TextAlign.center,
                   ),
-                  RichText(
-                    text: TextSpan(
-                        style: const TextStyle(
-                          color: Colors.black,
-                        ),
+                  Text.rich(
+                    TextSpan(
+                        // style: const TextStyle(
+                        //   color: Colors.black,
+                        // ),
                         children: serviceEnabled==true  ? [
                           TextSpan(text: 'Lat: ',style: const TextStyle(fontWeight: FontWeight.bold)),
                           TextSpan(text: '${lat},'),
@@ -196,11 +197,11 @@ class _CompassState extends State<Compass> {
                         ]
                     ),
                   ),
-                  RichText(
-                    text: TextSpan(
-                        style: const TextStyle(
-                          color: Colors.black,
-                        ),
+                  Text.rich(
+                    TextSpan(
+                        // style: const TextStyle(
+                        //   color: Colors.black,
+                        // ),
                         children: <TextSpan>[
                           TextSpan(text: 'Altitude: ',style: const TextStyle(fontWeight: FontWeight.bold)),
                           TextSpan(text: '$alt'),

@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -5,8 +7,10 @@ import 'package:internet_connection_checker/internet_connection_checker.dart';
 import 'package:pedometer/pedometer.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
+import 'package:proximity_sensor/proximity_sensor.dart';
+import 'package:sensors_plus/sensors_plus.dart';
 import 'package:thesis/Compass.dart';
-import 'package:thesis/Sensors.dart';
+import 'package:thesis/Sensors.dart' as sens;
 import 'package:thesis/Settings.dart';
 import 'package:thesis/Sidemenu.dart';
 import 'package:thesis/Login.dart';
@@ -24,6 +28,10 @@ import 'package:intl/intl.dart';
 import 'package:flutter_offline/flutter_offline.dart';
 import 'dart:async';
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:http/http.dart' as http;
+import 'package:flutter/foundation.dart' as foundation;
+import 'package:geolocator/geolocator.dart' as geo;
+import 'package:location/location.dart' as loc;
 
 String? saved_mail,saved_pass;
 var box;
@@ -188,9 +196,38 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver{
 
   //var box = Hive.box('user').add(user);
 
-
-
   ReceivePort? _receivePort;
+
+  //Sensors variables
+  int srt=10, ttl_stps=0;//srt for sampling rate time of sensors, ttl_stps for getting the sum of the daily steps
+  double ax=0,ay=0,az=0,gx=0,gy=0,gz=0,mx=0, my=0, mz=0, pressure=0;//a for user accelerometer, g for gyroscope, m  for magnetometer, pressure for getting the value of pressure
+  String amsg='',gmsg='',mmsg='',nmsg='', pmsg='Pressure not available'; //a for user accelerometer, g for gyroscope, m for magnetometer,n for proximity,p for pressure
+  bool _isNear = false; //for proximity sensor
+  late StreamSubscription<dynamic> _streamSubscription; //for proximity sensor
+  //press_check for checking if the device has pressure sensor,prox_check for checking if the device has proximity sensor,acc_check for checking if
+  //the device has accelerometer,gyro_check for checking if the device has gyroscope,magn_check for checking if the device has magnetometer
+  bool press_check = false, prox_check = false, acc_check = false, gyro_check = false, magn_check = false;
+
+  Timer ?timer,timer_acc,timer_gyro,timer_magn,timer_press,timer_prox;
+
+  static const press_channel = MethodChannel('pressure_sensor');
+  static const prox_channel = MethodChannel('proximity_channel');
+  static const acc_channel = MethodChannel('accelerometer_channel');
+  static const gyro_channel = MethodChannel('gyroscope_channel');
+  static const magn_channel = MethodChannel('magnetometer_channel');
+
+  static const pressure_channel = EventChannel('pressure_channel');//Channel for comunicating with android
+  StreamSubscription? pressureSubscription;
+
+
+  //Location variables
+  bool hasPermissionsGPS = false, serviceEnabled = false;//hasPermissions if the gps permissions are given, serviceEnabled if the gps is enabled
+  double lat=0, lng=0;//lat for getting the latitude, lng for getting the longitude
+
+  geo.Position ?currentPosition;
+  loc.LocationData ?currentLocation;
+  loc.Location location = new loc.Location();
+  int steps_db = 0;
 
   Future<void> initForegroundTask() async {
     await FlutterForegroundTask.init(
@@ -294,7 +331,7 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver{
   void initState() {
     super.initState();
 
-    WidgetsBinding.instance?.addObserver(this);
+    WidgetsBinding.instance.addObserver(this);
 
     initForegroundTask();
     startForegroundTask();
@@ -311,22 +348,158 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver{
     stepController.addListener(stepscount);
     heightController.addListener(heightcount);
 
-    box.get('');
+    // box.get('');
 
     initConnectivity();
 
     connectivitySubscription = connectivity.onConnectivityChanged.listen(updateConnectionStatus);
+
+    //Sensors
+    check_pressure_availability();
+    check_proximity_availability();
+    check_acc_availability();
+    check_gyro_availability();
+    check_magn_availability();
+
+    //accelerometer initialization event
+    userAccelerometerEvents.listen((UserAccelerometerEvent event) {
+      if(acc_check == true){
+        ax = event.x;
+        ay = event.y;
+        az = event.z;
+        amsg='x:${ax.toStringAsFixed(2)} y:${ay.toStringAsFixed(2)} z:${az.toStringAsFixed(2)}';
+        //timer_acc = Timer.periodic(Duration(seconds: 5), (Timer t) => insert_acc_toDb());
+      }
+      else{
+        amsg='Accelerometer not available';
+      }
+    });
+
+    //gyroscope initialization event
+    gyroscopeEvents.listen((GyroscopeEvent event) {
+      if(gyro_check == true) {
+        gx = event.x;
+        gy = event.y;
+        gz = event.z;
+        gmsg = 'x:${gx.toStringAsFixed(2)} y:${gy.toStringAsFixed(2)} z:${gz.toStringAsFixed(2)}';
+        //timer_gyro = Timer.periodic(Duration(seconds: 5), (Timer t) => insert_gyro_toDb());
+      }
+      else{
+        gmsg='Gyroscope not available';
+      }
+    });
+
+    //magnetometer initialization event
+    magnetometerEvents.listen((MagnetometerEvent event) {
+      if(magn_check == true){
+        mx = event.x;
+        my = event.y;
+        mz = event.z;
+        mmsg='x:${mx.toStringAsFixed(2)} y:${my.toStringAsFixed(2)} z:${mz.toStringAsFixed(2)}';
+        //timer_magn = Timer.periodic(Duration(seconds: 5), (Timer t) => insert_magn_toDb());
+      }
+      else{
+        mmsg='Magnetometer not available';
+      }
+    });
+
+    //proximity sensor initialization
+    listenSensor();
+
+    //pressure initialization event
+    StartScreen().pressureSubscription = StartScreen.pressure_channel.receiveBroadcastStream().listen((event) {
+      print('Mpike stin sun');
+      if(press_check == true){
+        pressure=event;
+        pmsg = '${pressure.toStringAsFixed(2)} mbar';
+        print('Mpike sto if');
+        if(press_check == false)
+        {
+          pmsg = 'Pressure not available';
+        }
+        //timer_press = Timer.periodic(Duration(seconds: 5), (Timer t) => insert_pressure_toDb());
+      }
+      else{
+        print('Mpike sto else');
+        pmsg = 'Pressure not available';
+      }
+    });
+
+
+    if(box.get('sensors_sr')!=null){
+      srt = box.get('sensors_sr');
+    }
+    timer = Timer.periodic(Duration(seconds: srt), (Timer t) {
+      // print('Oi aisthitires einai $amsg, $gmsg, $mmsg, $pmsg, $nmsg');
+
+      if(acc_check == true){
+        insert_acc_toDb();
+      }
+      else{
+        ax=0;
+        ay=0;
+        az=0;
+      }
+      if(gyro_check == true){
+        insert_gyro_toDb();
+      }
+      else{
+        gx=0;
+        gy=0;
+        gz=0;
+      }
+      if(magn_check == true){
+        insert_magn_toDb();
+      }
+      else{
+        mx=0;
+        my=0;
+        mz=0;
+      }
+      if(press_check == true){
+        insert_pressure_toDb();
+      }
+      else{
+        pressure=0;
+      }
+      if(prox_check == true){
+        insert_prox_toDb();
+      }
+      insert_sensors_toDb();
+      //check();
+      // print('I ekxorisi egine sosta!');
+
+    });
+
+    //Coordinates
+
+    // fetchPermissionStatusGPS();
+
+    if(box.get('GPS')==true){
+      location.onLocationChanged.listen((loc.LocationData cLoc) {
+
+        currentLocation = cLoc;
+        setpoint(cLoc.latitude, cLoc.longitude);
+
+        insert_toDb_GPS();
+        print('Oi suntetagmenes einai $lat, $lng');
+
+      });
+    }
+    // getsensors();
   }
 
   @override
   void dispose() {
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
 
-    WidgetsBinding.instance?.removeObserver(this);
+    WidgetsBinding.instance.removeObserver(this);
 
     stepController.dispose();
     heightController.dispose();
     closeReceivePort();
+
+    _streamSubscription.cancel();
 
     //Hive.close(); den xreiazetai aparaitita
 
@@ -344,14 +517,14 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver{
 
     if(state == AppLifecycleState.resumed){
       NavigationState().location.enableBackgroundMode(enable:false);
-      print('fainetai ston xristi');
+      print('Seen by the user');
     }
     else if (isBackground) {
       NavigationState().location.enableBackgroundMode(enable: true);
-      print('μπηκε στο μπαγκραουντ');
+      print('Got to background');
     }
     if(state == AppLifecycleState.detached) {
-      print('feygo');
+      print('Closing app');
       stopForegroundTask();
       exit(0);
     }
@@ -368,6 +541,7 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver{
 
   void onStepCount(StepCount event) {
     print(event);
+    steps_db = event.steps;
     setState(() {
       if(box.get('today_steps')==null){
         box.put('today_steps',0);
@@ -469,6 +643,16 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver{
 
       if((connectionStatus == ConnectivityResult.mobile || connectionStatus == ConnectivityResult.wifi) && hasInternet == true){
         print('Exei sundesi sto internet');
+
+        update_altitude();
+        update_daily_steps();
+        update_coor();
+        update_sensors();
+        // update_pressure();
+        // update_acc();
+        // update_gyro();
+        // update_magn();
+        // update_prox();
       }
       else{
         print('Den exei sundesi sto internet');
@@ -476,12 +660,408 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver{
     });
   }
 
+  //update_altitude for updating the ununpdated altitude field from the local db
+  update_altitude() async{
+    //load altitude from local db to a list map and then to a list of objects
+    List<Map> alt = await SqlDatabase.instance.select_altitude_unupdated();
+    List<Object> arr = List<Map>.from(alt);
+
+    var response = await http.post(Uri.parse('https://api.sodasense.uop.gr/v1/altitudeData'),
+        headers:{
+          'Authorization':'Bearer ' + box.get('access_token'),
+          HttpHeaders.acceptHeader: 'application/json',
+          HttpHeaders.contentTypeHeader: 'application/json'
+        },
+        body: jsonEncode({
+          "userId": box.get('userid'),
+          "altitude": arr
+        }));
+    print('Status code: ${response.statusCode}');
+    print('Response body: ${response.body}');
+    print('Reason phrase: ${response.reasonPhrase}, altitude is uploaded');
+    // if(response.statusCode == 200){
+    //   print('OK');
+    // }
+  }
+
+  // //update_pressure for updating the ununpdated pressure fields from the local db
+  // update_pressure() async{
+  //   //load pressure from local db to a list map and then to a list of objects
+  //   List<Map> press = await SqlDatabase.instance.select_pressure_unupdated();
+  //   List<Object> arr = List<Map>.from(press);
+  //
+  //   var response = await http.post(Uri.parse('https://api.sodasense.uop.gr/v1/environmentalData'),
+  //       headers:{
+  //         'Authorization':'Bearer ' + box.get('access_token'),
+  //         HttpHeaders.acceptHeader: 'application/json',
+  //         HttpHeaders.contentTypeHeader: 'application/json'
+  //       },
+  //       body: jsonEncode({
+  //         "userId": box.get('userid'),
+  //         "pressure": arr
+  //       }));
+  //   print('Status code: ${response.statusCode}');
+  //   print('Response body: ${response.body}');
+  //   print('Reason phrase: ${response.reasonPhrase}, pressure is uploaded');
+  //   // if(response.statusCode == 200){
+  //   //   print('OK');
+  //   // }
+  // }
+
+  // //update_acc for updating the ununpdated accelaration fields from the local db
+  // update_acc() async{
+  //   //load accelaration from local db to a list map and then to a list of objects
+  //   List<Map> acc = await SqlDatabase.instance.select_acc_unupdated();
+  //   List<Object> arr = List<Map>.from(acc);
+  //
+  //   var response = await http.post(Uri.parse('https://api.sodasense.uop.gr/v1/accelerationData'),
+  //       headers:{
+  //         'Authorization':'Bearer ' + box.get('access_token'),
+  //         HttpHeaders.acceptHeader: 'application/json',
+  //         HttpHeaders.contentTypeHeader: 'application/json'
+  //       },
+  //       body: jsonEncode({
+  //         "userId": box.get('userid'),
+  //         "accelaration": arr
+  //       }));
+  //   print('Status code: ${response.statusCode}');
+  //   print('Response body: ${response.body}');
+  //   print('Reason phrase: ${response.reasonPhrase}, acceleration is uploaded');
+  //   // if(response.statusCode == 200){
+  //   //   print('OK');
+  //   // }
+  // }
+
+  // //update_gyro for updating the ununpdated gyroscope fields from the local db
+  // update_gyro() async{
+  //   //load gyroscope from local db to a list map and then to a list of objects
+  //   List<Map> gyro = await SqlDatabase.instance.select_gyro_unupdated();
+  //   List<Object> arr = List<Map>.from(gyro);
+  //
+  //   var response = await http.post(Uri.parse('https://api.sodasense.uop.gr/v1/gyroscopeData'),
+  //       headers:{
+  //         'Authorization':'Bearer ' + box.get('access_token'),
+  //         HttpHeaders.acceptHeader: 'application/json',
+  //         HttpHeaders.contentTypeHeader: 'application/json'
+  //       },
+  //       body: jsonEncode({
+  //         "userId": box.get('userid'),
+  //         "gyroscope": arr
+  //       }));
+  //   print('Status code: ${response.statusCode}');
+  //   print('Response body: ${response.body}');
+  //   print('Reason phrase: ${response.reasonPhrase}, gyroscope is uploaded');
+  //   // if(response.statusCode == 200){
+  //   //   print('OK');
+  //   // }
+  // }
+
+  // //update_magn for updating the ununpdated magnometer fields from the local db
+  // update_magn() async{
+  //   //load magnetometer from local db to a list map and then to a list of objects
+  //   List<Map> magn = await SqlDatabase.instance.select_magn_unupdated();
+  //   List<Object> arr = List<Map>.from(magn);
+  //
+  //   var response = await http.post(Uri.parse('https://api.sodasense.uop.gr/v1/magnetometerData'),
+  //       headers:{
+  //         'Authorization':'Bearer ' + box.get('access_token'),
+  //         HttpHeaders.acceptHeader: 'application/json',
+  //         HttpHeaders.contentTypeHeader: 'application/json'
+  //       },
+  //       body: jsonEncode({
+  //         "userId": box.get('userid'),
+  //         "magnetometer": arr
+  //       }));
+  //   print('Status code: ${response.statusCode}');
+  //   print('Response body: ${response.body}');
+  //   print('Reason phrase: ${response.reasonPhrase}, magnetometer is uploaded');
+  //   // if(response.statusCode == 200){
+  //   //   print('OK');
+  //   // }
+  // }
+
+  // //update_prox for updating the ununpdated proximity fields from the local db
+  // update_prox() async{
+  //   //load proximity from local db to a list map and then to a list of objects
+  //   List<Map> prox = await SqlDatabase.instance.select_prox_unupdated();
+  //   List<Object> arr = List<Map>.from(prox);
+  //
+  //   var response = await http.post(Uri.parse('https://api.sodasense.uop.gr/v1/proximityData'),
+  //       headers:{
+  //         'Authorization':'Bearer ' + box.get('access_token'),
+  //         HttpHeaders.acceptHeader: 'application/json',
+  //         HttpHeaders.contentTypeHeader: 'application/json'
+  //       },
+  //       body: jsonEncode({
+  //         "userId": box.get('userid'),
+  //         "proximity": arr
+  //       }));
+  //   print('Status code: ${response.statusCode}');
+  //   print('Response body: ${response.body}');
+  //   print('Reason phrase: ${response.reasonPhrase}, proximity is uploaded');
+  //   // if(response.statusCode == 200){
+  //   //   print('OK');
+  //   // }
+  // }
+
+  //update_daily_steps for updating the ununpdated daily_steps fields from the local db
+  update_daily_steps() async{
+    //load daily_steps from local db to a list map and then to a list of objects
+    List<Map> dsteps = await SqlDatabase.instance.select_daily_steps_unupdated();
+    List<Object> arr = List<Map>.from(dsteps);
+
+    var response = await http.post(Uri.parse('https://api.sodasense.uop.gr/v1/dailystepsData'),
+        headers:{
+          'Authorization':'Bearer ' + box.get('access_token'),
+          HttpHeaders.acceptHeader: 'application/json',
+          HttpHeaders.contentTypeHeader: 'application/json'
+        },
+        body: jsonEncode({
+          "userId": box.get('userid'),
+          "dailysteps": arr
+        }));
+    print('Status code: ${response.statusCode}');
+    print('Response body: ${response.body}');
+    print('Reason phrase: ${response.reasonPhrase}, daily steps is uploaded');
+    // if(response.statusCode == 200){
+    //   print('OK');
+    // }
+  }
+
+  //update_coor for updating the ununpdated coordinates fields from the local db
+  update_coor() async{
+    //load coordinates from local db to a list map and then to a list of objects
+    List<Map> coor = await SqlDatabase.instance.select_coor_unupdated();
+    List<Object> arr = List<Map>.from(coor);
+
+    var response = await http.post(Uri.parse('https://api.sodasense.uop.gr/v1/userTrackingData'),
+        headers:{
+          'Authorization':'Bearer ' + box.get('access_token'),
+          HttpHeaders.acceptHeader: 'application/json',
+          HttpHeaders.contentTypeHeader: 'application/json'
+        },
+        body: jsonEncode({
+          "userId": box.get('userid'),
+          "coordinates": arr
+        }));
+    print('Status code: ${response.statusCode}');
+    print('Response body: ${response.body}');
+    print('Reason phrase: ${response.reasonPhrase}, coordinates is uploaded');
+    // if(response.statusCode == 200){
+    //   print('OK');
+    // }
+  }
+
+  //update_sensors for updating the ununpdated sensors fields from the local db
+  update_sensors() async{
+    //load sensors from local db to a list map and then to a list of objects
+    List<Map> sensors = await SqlDatabase.instance.select_sensors_unupdated();
+    List<Object> arr = List<Map>.from(sensors);
+
+    var response = await http.post(Uri.parse('https://api.sodasense.uop.gr/v1/sensorsData'),
+        headers:{
+          'Authorization':'Bearer ' + box.get('access_token'),
+          HttpHeaders.acceptHeader: 'application/json',
+          HttpHeaders.contentTypeHeader: 'application/json'
+        },
+        body: jsonEncode({
+          "userId": box.get('userid'),
+          "sensors": arr
+        }));
+    print('Status code: ${response.statusCode}');
+    print('Response body: ${response.body}');
+    print('Reason phrase: ${response.reasonPhrase}, sensors is uploaded');
+    // if(response.statusCode == 200){
+    //   print('OK');
+    // }
+  }
+
+  //Future for gettind data from proximity sensor
+  Future<void> listenSensor() async {
+    FlutterError.onError = (FlutterErrorDetails details) {
+      if (foundation.kDebugMode) {
+        FlutterError.dumpErrorToConsole(details);
+      }
+    };
+    _streamSubscription = ProximitySensor.events.listen((int event) {
+      if(prox_check == true) {
+        _isNear = (event > 0) ? true : false;
+        if (_isNear == true) {
+          nmsg = "'Yes'";
+        }
+        else {
+          nmsg = "'No'";
+        }
+        //timer_prox = Timer.periodic(Duration(seconds: 5), (Timer t) => insert_prox_toDb());
+      }
+      else{
+        nmsg = 'Proximity not available';
+      }
+      print(nmsg);
+    });
+  }
+
+  //Future for checking the availability of pressure sensor
+  Future<void> check_pressure_availability() async {
+    try {
+      var available = await StartScreen.press_channel.invokeMethod('isSensorAvailable');
+      press_check = available;
+    } on PlatformException catch (e) {
+      print(e);
+    }
+  }
+
+  //Future for checking the availability of proximity sensor
+  Future<void> check_proximity_availability() async {
+    if(Platform.isIOS){
+      prox_check = true;
+    }
+    try {
+      var available = await StartScreen.prox_channel.invokeMethod('isSensorAvailable');
+      prox_check = available;
+    } on PlatformException catch (e) {
+      print(e);
+    }
+  }
+
+  //Future for checking the availability of accelerometer sensor
+  Future<void> check_acc_availability() async {
+    if(Platform.isIOS){
+      acc_check = true;
+    }
+    try {
+      var available = await StartScreen.acc_channel.invokeMethod('isSensorAvailable');
+      acc_check = available;
+    } on PlatformException catch (e) {
+      print(e);
+    }
+  }
+
+  //Future for checking the availability of gyroscope sensor
+  Future<void> check_gyro_availability() async {
+    if(Platform.isIOS){
+      gyro_check = true;
+    }
+    try {
+      var available = await StartScreen.gyro_channel.invokeMethod('isSensorAvailable');
+      gyro_check = available;
+    } on PlatformException catch (e) {
+      print(e);
+    }
+  }
+
+  //Future for checking the availability of magnetometer
+  Future<void> check_magn_availability() async {
+    if(Platform.isIOS){
+      magn_check = true;
+    }
+    try {
+      var available = await StartScreen.magn_channel.invokeMethod('isSensorAvailable');
+      magn_check = available;
+    } on PlatformException catch (e) {
+      print(e);
+    }
+  }
+
+  //function for inserting to the database the pressure data
+  void insert_pressure_toDb() async{
+    date = DateTime.now().millisecondsSinceEpoch;
+    await SqlDatabase.instance.insert_pressure(date,pressure!,0);
+    //print('KOMPLE TO PRESS');
+  }
+
+  //function for inserting to the database the acceleration data
+  void insert_acc_toDb() async{
+    date = DateTime.now().millisecondsSinceEpoch;
+    await SqlDatabase.instance.insert_acc(date, ax!, ay!, az!, 0);
+    //print('KOMPLE TO ACC');
+  }
+
+  //function for inserting to the database the gyroscope data
+  void insert_gyro_toDb() async{
+    date = DateTime.now().millisecondsSinceEpoch;
+    await SqlDatabase.instance.insert_gyro(date, gx!, gy!, gz!, 0);
+    //print('KOMPLE TO GYRO');
+  }
+
+  //function for inserting to the database the magnetometer data
+  void insert_magn_toDb() async{
+    date = DateTime.now().millisecondsSinceEpoch;
+    await SqlDatabase.instance.insert_magn(date,mx!,my!,mz!,0);
+    //print('KOMPLE TO MAGN');
+  }
+
+  //function for inserting to the database the proximity data
+  void insert_prox_toDb() async{
+    date = DateTime.now().millisecondsSinceEpoch;
+    await SqlDatabase.instance.insert_prox(date, "$nmsg", 0);
+    //print('KOMPLE TO PROX');
+  }
+
+  //function for inserting to the database the sensors data
+  void insert_sensors_toDb() async{
+    int steps=0;
+
+    if(steps_db == 0){
+      steps=0;
+    }
+    else if(steps_db > 0){
+      steps = steps_db;
+    }
+    // print('Ta vimata einai $steps');
+    date = DateTime.now().millisecondsSinceEpoch;
+    await SqlDatabase.instance.insert_sensors(date, pressure, ax, ay, az, gx, gy, gz, mx,my,mz, "$nmsg", steps, 0);
+    //print('KOMPLE TO PROX');
+  }
+
+  //Function for checking if the app has the location permission
+  void fetchPermissionStatusGPS() {
+    Permission.locationWhenInUse.status.then((status) {
+      if (mounted) {
+        setState(() => hasPermissionsGPS = status == PermissionStatus.granted);
+      }
+    });
+  }
+
+  //Function for getting the status of Gps
+  Future<geo.Position> getGeoLocationPosition() async {
+
+    serviceEnabled = await geo.Geolocator.isLocationServiceEnabled();
+
+    return await geo.Geolocator.getCurrentPosition(desiredAccuracy: geo.LocationAccuracy.best);
+  }
+
+  //setpoint for saving the coordinatesas lat and lng
+  void setpoint(latitude,longitude) async{
+    serviceEnabled = await geo.Geolocator.isLocationServiceEnabled();
+
+    lat=latitude;
+    lng=longitude;
+  }
+
+  //Function for inserting GPS coodinates to sql db
+  void insert_toDb_GPS() async{
+    if(lat!=0.0 && lng!=0.0){
+      date = DateTime.now().millisecondsSinceEpoch;
+      await SqlDatabase.instance.insert_coor(date,lat,lng,0);
+    }
+    // print('has inserted somethinggggggggggggggggg');
+  }
+
+  //getCoordinates for getting the coordinates points from the first date picker
+  getsensors() async{
+    List<Map> lista = await SqlDatabase.instance.select_sensors();
+
+    for(int i=0;i<lista.length;i++){
+      print('To sensors $i periexei ${lista[i]}');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
 
     Size size = MediaQuery.of(context).size;
-
+    //WillPopScope is a method for handling back button
     return WillPopScope(
       onWillPop: () async {
 
@@ -739,6 +1319,15 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver{
 
                   SizedBox(height: size.height * 0.03),
 
+                  Builder(builder: (context){
+                    if(box.get('GPS') == true){
+                      return Container();
+                    }
+                    else{
+                      return buildPermissionSheetGPS();
+                    }
+                  }),
+
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
@@ -818,7 +1407,7 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver{
                                 maximumSize: const Size(125,35),
                               ),
                               onPressed:() => {
-                                Navigator.push(context, MaterialPageRoute(builder: (context) => Sensors()))
+                                Navigator.push(context, MaterialPageRoute(builder: (context) => sens.Sensors()))
                               },
                               child:Row(
                                 mainAxisSize: MainAxisSize.min,
@@ -894,6 +1483,8 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver{
                                       var box = Hive.box('user');
                                       box.delete('email');
                                       box.delete('pass');
+                                      box.delete('access_token');
+                                      box.delete('userid');
                                       Navigator.push(context, MaterialPageRoute(builder: (context) => Login()));
                                     }, child: Text('Yes'))
                                   ],
@@ -1063,6 +1654,43 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver{
               });
             },
           )
+        ],
+      ),
+    );
+  }
+
+  //Widget for showing location permissions menu
+  Widget buildPermissionSheetGPS() {
+    Size size = MediaQuery.of(context).size;
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          SizedBox(height: size.height * 0.03),
+          Text('Location Permission Required'),
+          ElevatedButton(
+            child: Text('Request Permissions'),
+            onPressed: () async{
+              Permission.locationWhenInUse.request().then((ignored) {
+                fetchPermissionStatusGPS();
+              });
+              await box.put('GPS', hasPermissionsGPS);
+            },
+          ),
+          SizedBox(height: 16),
+          ElevatedButton(
+            child: Text('Open App Settings'),
+            onPressed: () async{
+              openAppSettings().then((opened) {
+                if(Permission.locationAlways.isGranted == true){
+                  hasPermissionsGPS = true;
+                }
+              });
+              await box.put('GPS', hasPermissionsGPS);
+              print(box.get('GPS'));
+            },
+          ),
+          SizedBox(height: size.height * 0.03)
         ],
       ),
     );
