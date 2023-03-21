@@ -364,7 +364,7 @@ class _SettingsState extends State<Settings> {
                 borderRadius: BorderRadius.circular(40),
               ),
               child: ListTile(
-                title: Text('Copy DB'),
+                title: Text('Save DB to downloads'),
                 onTap: () async {
                   final dbFolder = await getDatabasesPath();
                   File source1 = File('$dbFolder/db.db');

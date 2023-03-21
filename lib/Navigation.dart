@@ -5,6 +5,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:provider/provider.dart';
 import 'package:thesis/Sidemenu.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'dart:async';
@@ -18,6 +19,7 @@ import 'package:hive/hive.dart';
 import 'package:thesis/SqlDatabase.dart';
 import 'package:flutter/services.dart';
 import 'package:sliding_up_panel/sliding_up_panel.dart';
+import 'package:thesis/Theme_provider.dart';
 
 class CachedTileProvider extends TileProvider {
   const CachedTileProvider({customCacheManager});
@@ -335,6 +337,8 @@ class NavigationState extends State<Navigation> {
   Widget build(BuildContext context) {
     Size size = MediaQuery.of(context).size;
 
+    final themeProvider = Provider.of<ThemeProvider>(context);
+
     return Scaffold(
           drawer: Sidemenu(),
           appBar: AppBar(
@@ -564,7 +568,15 @@ class NavigationState extends State<Navigation> {
                                         ),
                                       ),
                                     ),
+                                    actionsAlignment: MainAxisAlignment.spaceEvenly,
                                     actions: [
+                                      ElevatedButton(
+                                          onPressed: () {
+                                            polylineCoordinates = [];
+                                            Navigator.pop(context);
+                                          },
+                                          child: Text('Cancel')
+                                      ),
                                       ElevatedButton(
                                         onPressed: () async {
                                           if((selected_date == '' || selected_date == null) && (selected_date_second == '' || selected_date_second == null)){
@@ -610,7 +622,7 @@ class NavigationState extends State<Navigation> {
                                           }
                                         },
                                         child: Text('Ok')
-                                      )
+                                      ),
                                     ],
                                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.0)),
 
@@ -670,6 +682,7 @@ class NavigationState extends State<Navigation> {
                       borderRadius: BorderRadius.vertical(top: Radius.circular(18.0)),
                       parallaxEnabled: true,
                       parallaxOffset: 0.5,
+                      color: themeProvider.isDarkMode == true ? Colors.grey.shade900 : Colors.white,
                       panel: Container(
                         padding: EdgeInsets.symmetric(horizontal: 24),
                         child: Column(

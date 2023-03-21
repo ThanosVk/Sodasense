@@ -355,7 +355,7 @@ class _SensorsState extends State<Sensors> {
                 ),
                 ListTile(
                   leading: Icon(Icons.sensors_outlined),
-                  title: Text('Is anything near?', style: TextStyle(fontSize: 18.0,fontWeight: FontWeight.bold)),
+                  title: Text('Proximity', style: TextStyle(fontSize: 18.0,fontWeight: FontWeight.bold)),
                   trailing: Text('${nmsg.replaceAll("'","")}'),
                 ),
               ],

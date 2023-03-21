@@ -38,7 +38,7 @@ dependencies:
   pedometer: ^3.0.0
   proximity_sensor: ^1.0.2
   flutter_compass: ^0.7.0
-  permission_handler: ^8.2.5
+  permission_handler: ^10.2.0
   fluttertoast: ^8.0.8
   email_validator: ^2.0.1
   geolocator: ^8.0.0

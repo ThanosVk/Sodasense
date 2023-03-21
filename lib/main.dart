@@ -216,7 +216,7 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver{
   static const gyro_channel = MethodChannel('gyroscope_channel');
   static const magn_channel = MethodChannel('magnetometer_channel');
 
-  static const pressure_channel = EventChannel('pressure_channel');//Channel for comunicating with android
+  static const pressure_channel = EventChannel('pressure_channel');//Channel for communicating with android
   StreamSubscription? pressureSubscription;
 
 
@@ -347,6 +347,12 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver{
     //Start listening to values with listener
     stepController.addListener(stepscount);
     heightController.addListener(heightcount);
+
+    if(box.get('today_steps') != null){
+      if(box.get('today_steps') > 0){
+        box.put('today_steps',box.get('today_steps') - 1);
+      }
+    }
 
     // box.get('');
 
@@ -530,13 +536,22 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver{
     }
   }
 
-
+  //fetchPermissionStatus for Android  and Ios activity permission
   void fetchPermissionStatus() {
-    Permission.activityRecognition.status.then((status) {
-      if (mounted) {
-        setState(() => hasPermissions = status == PermissionStatus.granted);
-      }
-    });
+    if(Platform.isAndroid){
+      Permission.activityRecognition.status.then((status) {
+        if (mounted) {
+          setState(() => hasPermissions = status == PermissionStatus.granted);
+        }
+      });
+    }
+    else if(Platform.isIOS){
+      Permission.sensors.status.then((status) {
+        if (mounted) {
+          setState(() => hasPermissions = status == PermissionStatus.granted);
+        }
+      });
+    }
   }
 
   void onStepCount(StepCount event) {
@@ -674,7 +689,8 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver{
         },
         body: jsonEncode({
           "userId": box.get('userid'),
-          "altitude": arr
+          "altitude": arr,
+          "email":box.get('email')
         }));
     print('Status code: ${response.statusCode}');
     print('Response body: ${response.body}');
@@ -818,7 +834,8 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver{
         },
         body: jsonEncode({
           "userId": box.get('userid'),
-          "dailysteps": arr
+          "dailysteps": arr,
+          "email":box.get('email')
         }));
     print('Status code: ${response.statusCode}');
     print('Response body: ${response.body}');
@@ -842,7 +859,8 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver{
         },
         body: jsonEncode({
           "userId": box.get('userid'),
-          "coordinates": arr
+          "coordinates": arr,
+          "email":box.get('email')
         }));
     print('Status code: ${response.statusCode}');
     print('Response body: ${response.body}');
@@ -866,7 +884,8 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver{
         },
         body: jsonEncode({
           "userId": box.get('userid'),
-          "sensors": arr
+          "sensors": arr,
+          "email":box.get('email')
         }));
     print('Status code: ${response.statusCode}');
     print('Response body: ${response.body}');
@@ -916,11 +935,13 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver{
     if(Platform.isIOS){
       prox_check = true;
     }
-    try {
-      var available = await StartScreen.prox_channel.invokeMethod('isSensorAvailable');
-      prox_check = available;
-    } on PlatformException catch (e) {
-      print(e);
+    else{
+      try {
+        var available = await StartScreen.prox_channel.invokeMethod('isSensorAvailable');
+        prox_check = available;
+      } on PlatformException catch (e) {
+        print(e);
+      }
     }
   }
 
@@ -929,11 +950,13 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver{
     if(Platform.isIOS){
       acc_check = true;
     }
-    try {
-      var available = await StartScreen.acc_channel.invokeMethod('isSensorAvailable');
-      acc_check = available;
-    } on PlatformException catch (e) {
-      print(e);
+    else{
+      try {
+        var available = await StartScreen.acc_channel.invokeMethod('isSensorAvailable');
+        acc_check = available;
+      } on PlatformException catch (e) {
+        print(e);
+      }
     }
   }
 
@@ -942,11 +965,13 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver{
     if(Platform.isIOS){
       gyro_check = true;
     }
-    try {
-      var available = await StartScreen.gyro_channel.invokeMethod('isSensorAvailable');
-      gyro_check = available;
-    } on PlatformException catch (e) {
-      print(e);
+    else{
+      try {
+        var available = await StartScreen.gyro_channel.invokeMethod('isSensorAvailable');
+        gyro_check = available;
+      } on PlatformException catch (e) {
+        print(e);
+      }
     }
   }
 
@@ -955,11 +980,13 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver{
     if(Platform.isIOS){
       magn_check = true;
     }
-    try {
-      var available = await StartScreen.magn_channel.invokeMethod('isSensorAvailable');
-      magn_check = available;
-    } on PlatformException catch (e) {
-      print(e);
+    else{
+      try {
+        var available = await StartScreen.magn_channel.invokeMethod('isSensorAvailable');
+        magn_check = available;
+      } on PlatformException catch (e) {
+        print(e);
+      }
     }
   }
 
@@ -1531,9 +1558,15 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver{
           ElevatedButton(
             child: Text('Request Permissions'),
             onPressed: () {
-              Permission.activityRecognition.request().then((ignored) {
-                fetchPermissionStatus();
-              });
+              if(Platform.isAndroid){
+                Permission.activityRecognition.request().then((ignored) {
+                  fetchPermissionStatus();
+                });
+              } else if(Platform.isIOS) {
+                Permission.sensors.request().then((ignored) {
+                  fetchPermissionStatus();
+                });
+              }
               showDialog(context: context, builder: (context) => StatefulBuilder(
                 builder: (BuildContext context, StateSetter setState) {
                   return AlertDialog(
