@@ -2,9 +2,9 @@
 
 # Sodasense
 
-Sodasense is a mobile application for Android and IOS made with Flutter that reigster and manage user's location and movement data. The application provides multiple screen for viewing the user's daily steps, a map that the user can see the current location and the route that is registered by day, a screen with a compass that shows the north, the address based on the user's current location with the city, postal code, country, longitude, latitude and the altitude. On Sensors screen, the user what sensors the device has and the metrics/data of each sensor. The collected data are saved in a local SQlite database and when the device is connected to the internet it sends the data to a server.
+Sodasense is a mobile application for Android and IOS made with Flutter that register and manage user's location and movement data. The application provides multiple screen for viewing the user's daily steps, a map that the user can see the current location and the route that is registered (by a specific day or by several days), a screen with a compass that shows the heading of the device, the address based on the user's current location with the city, postal code, country, longitude, latitude and the altitude. On Sensors screen, the user can see what sensors the device has and the metrics/data of each sensor. The collected data are saved in a local SQlite database and when the device is connected to the internet it sends the data to a server.
 
-## Attributes
+## Features
 
 - Offline first
 - Authorization and authentication with 3rd party service
