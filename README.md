@@ -1,16 +1,18 @@
-# thesis
 
-A new Flutter project.
 
-## Getting Started
+# Sodasense
+<p align="center">
+  <a href="url"><img src="https://github.com/ThanosVk/Sodasense/blob/master/Sodasense_Logo_4K-min.png" align="center" height="480" width="480" ></a>
+</p>
 
-This project is a starting point for a Flutter application.
+Sodasense is a mobile application for Android and IOS made with Flutter that register and manage user's location and movement data. The application provides multiple screen for viewing the user's daily steps, a map that the user can see the current location and the route that is registered (by a specific day or by several days), a screen with a compass that shows the heading of the device, the address based on the user's current location with the city, postal code, country, longitude, latitude and the altitude. On Sensors screen, the user can see what sensors the device has and the metrics/data of each sensor. The collected data are saved in a local SQlite database and when the device is connected to the internet it sends the data to a server.
 
-A few resources to get you started if this is your first Flutter project:
+## Features
 
-- [Lab: Write your first Flutter app](https://flutter.dev/docs/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://flutter.dev/docs/cookbook)
+- Offline first
+- Authorization and authentication with 3rd party service
+- User can select specific date to show the route on the map
+- Built in Sqlite database
+- Synchronization of the local data with Mongodb database on server
 
-For help getting started with Flutter, view our
-[online documentation](https://flutter.dev/docs), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## Screens of the application
