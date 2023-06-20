@@ -45,17 +45,17 @@ import Foundation
 //            }
 //        })
 
-    let accchannel = FlutterMethodChannel(name: acc_channel, binaryMessenger: controller.binaryMessenger)
-
-    accchannel.setMethodCallHandler({
-        (call: FlutterMethodCall, result: @escaping FlutterResult) -> Void in
-        switch call.method {
-        case "isSensorAvailable":
-            result(CMSensorRecorder.isAccelerometerRecordingAvailable())//an den douleuei to epitaxinsionometro ftaei auto
-        default:
-            result(FlutterMethodNotImplemented)
-        }
-    })
+//     let accchannel = FlutterMethodChannel(name: acc_channel, binaryMessenger: controller.binaryMessenger)
+//
+//     accchannel.setMethodCallHandler({
+//         (call: FlutterMethodCall, result: @escaping FlutterResult) -> Void in
+//         switch call.method {
+//         case "isSensorAvailable":
+//             result(CMSensorRecorder.isAccelerometerRecordingAvailable())//an den douleuei to epitaxinsionometro ftaei auto
+//         default:
+//             result(FlutterMethodNotImplemented)
+//         }
+//     })
 
 //    let gyrochannel = FlutterMethodChannel(name: gyro_channel, binaryMessenger: controller.binaryMessenger)
 //

@@ -112,12 +112,12 @@ class _SensorsState extends State<Sensors> {
 
     //pressure initialization event
     StartScreen().pressureSubscription = StartScreen.pressure_channel.receiveBroadcastStream().listen((event) {
-      print('Mpike stin sun');
+      // print('Mpike stin sun');
       setState(() {
         if(press_check == true){
           pressure=event;
           pmsg = '${pressure.toStringAsFixed(2)} mbar';
-          print('Mpike sto if');
+          // print('Mpike sto if');
           if(press_check == false)
           {
             pmsg = 'Pressure not available';
@@ -125,7 +125,7 @@ class _SensorsState extends State<Sensors> {
           //timer_press = Timer.periodic(Duration(seconds: 5), (Timer t) => insert_pressure_toDb());
         }
         else{
-          print('Mpike sto else');
+          // print('Mpike sto else');
           pmsg = 'Pressure not available';
         }
       });
@@ -213,13 +213,15 @@ class _SensorsState extends State<Sensors> {
     if(Platform.isIOS){
       prox_check = true;
     }
-    try {
-      var available = await StartScreen.prox_channel.invokeMethod('isSensorAvailable');
-      setState(() {
-        prox_check = available;
-      });
-    } on PlatformException catch (e) {
-      print(e);
+    else{
+      try {
+        var available = await StartScreen.prox_channel.invokeMethod('isSensorAvailable');
+        setState(() {
+          prox_check = available;
+        });
+      } on PlatformException catch (e) {
+        print(e);
+      }
     }
   }
 
@@ -228,13 +230,15 @@ class _SensorsState extends State<Sensors> {
     if(Platform.isIOS){
       acc_check = true;
     }
-    try {
-      var available = await StartScreen.acc_channel.invokeMethod('isSensorAvailable');
-      setState(() {
-        acc_check = available;
-      });
-    } on PlatformException catch (e) {
-      print(e);
+    else{
+      try {
+        var available = await StartScreen.acc_channel.invokeMethod('isSensorAvailable');
+        setState(() {
+          acc_check = available;
+        });
+      } on PlatformException catch (e) {
+        print(e);
+      }
     }
   }
 
@@ -243,13 +247,15 @@ class _SensorsState extends State<Sensors> {
     if(Platform.isIOS){
       gyro_check = true;
     }
-    try {
-      var available = await StartScreen.gyro_channel.invokeMethod('isSensorAvailable');
-      setState(() {
-        gyro_check = available;
-      });
-    } on PlatformException catch (e) {
-      print(e);
+    else{
+      try {
+        var available = await StartScreen.gyro_channel.invokeMethod('isSensorAvailable');
+        setState(() {
+          gyro_check = available;
+        });
+      } on PlatformException catch (e) {
+        print(e);
+      }
     }
   }
 
@@ -258,13 +264,15 @@ class _SensorsState extends State<Sensors> {
     if(Platform.isIOS){
       magn_check = true;
     }
-    try {
-      var available = await StartScreen.magn_channel.invokeMethod('isSensorAvailable');
-      setState(() {
-        magn_check = available;
-      });
-    } on PlatformException catch (e) {
-      print(e);
+    else{
+      try {
+        var available = await StartScreen.magn_channel.invokeMethod('isSensorAvailable');
+        setState(() {
+          magn_check = available;
+        });
+      } on PlatformException catch (e) {
+        print(e);
+      }
     }
   }
 
@@ -334,12 +342,12 @@ class _SensorsState extends State<Sensors> {
                   trailing: ttl_stps == 0 ? Text('-') : Text('$ttl_stps'),
                 ),
                 ListTile(
-                  leading: FaIcon(FontAwesomeIcons.tachometerAlt),
+                  leading: FaIcon(FontAwesomeIcons.gaugeHigh),
                   title: Text('Pressure', style: TextStyle(fontSize: 18.0,fontWeight: FontWeight.bold)),
                   trailing: Text(pmsg),
                 ),
                 ListTile(
-                  leading: Icon(FontAwesomeIcons.arrowsAlt),
+                  leading: Icon(FontAwesomeIcons.upDownLeftRight),
                   title: Text('Accelerometer', style: TextStyle(fontSize: 18.0,fontWeight: FontWeight.bold)),
                   trailing: Text(amsg),
                 ),

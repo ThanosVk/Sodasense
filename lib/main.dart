@@ -176,7 +176,7 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver{
   double steps_length=0,dist=0;//steps_length for finding the exact meters per user height,dist for distance in km
   late Stream<StepCount> _stepCountStream;
   late Stream<PedestrianStatus> _pedestrianStatusStream;
-  String _status = '', steps = 'ok';
+  String _status = '', steps = '0';
   int numsteps=0, sum_steps=0;
   bool hasPermissions = false,height_check=false;//hasPermissions for knowing if the device has permissions for activity sensor,height_check to know if height Textfield contains something
   bool height_validate=true;// height_validate for height validate textfield
@@ -201,7 +201,7 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver{
   //Sensors variables
   int srt=10, ttl_stps=0;//srt for sampling rate time of sensors, ttl_stps for getting the sum of the daily steps
   double ax=0,ay=0,az=0,gx=0,gy=0,gz=0,mx=0, my=0, mz=0, pressure=0;//a for user accelerometer, g for gyroscope, m  for magnetometer, pressure for getting the value of pressure
-  String amsg='',gmsg='',mmsg='',nmsg='', pmsg='Pressure not available'; //a for user accelerometer, g for gyroscope, m for magnetometer,n for proximity,p for pressure
+  String amsg='',gmsg='',mmsg='',nmsg="'No'", pmsg='Pressure not available'; //a for user accelerometer, g for gyroscope, m for magnetometer,n for proximity,p for pressure
   bool _isNear = false; //for proximity sensor
   late StreamSubscription<dynamic> _streamSubscription; //for proximity sensor
   //press_check for checking if the device has pressure sensor,prox_check for checking if the device has proximity sensor,acc_check for checking if
@@ -229,8 +229,8 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver{
   loc.Location location = new loc.Location();
   int steps_db = 0;
 
-  Future<void> initForegroundTask() async {
-    await FlutterForegroundTask.init(
+  void initForegroundTask() async {
+    FlutterForegroundTask.init(
       androidNotificationOptions: AndroidNotificationOptions(
         channelId: 'notification_channel_id',
         channelName: 'Foreground Notification',
@@ -252,7 +252,6 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver{
         autoRunOnBoot: false,
         allowWifiLock: true,
       ),
-      printDevLog: true,
 
 
     );
@@ -414,11 +413,9 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver{
 
     //pressure initialization event
     StartScreen().pressureSubscription = StartScreen.pressure_channel.receiveBroadcastStream().listen((event) {
-      print('Mpike stin sun');
       if(press_check == true){
         pressure=event;
         pmsg = '${pressure.toStringAsFixed(2)} mbar';
-        print('Mpike sto if');
         if(press_check == false)
         {
           pmsg = 'Pressure not available';
@@ -426,7 +423,6 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver{
         //timer_press = Timer.periodic(Duration(seconds: 5), (Timer t) => insert_pressure_toDb());
       }
       else{
-        print('Mpike sto else');
         pmsg = 'Pressure not available';
       }
     });
@@ -1277,7 +1273,7 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver{
                                           fit: StackFit.expand,
                                           children: [
                                             CircularProgressIndicator(
-                                              value:steps=='ok' && box.get('today_steps') != null ? box.get('today_steps')/box.get('target_steps') : 0,
+                                              value:steps=='0' && box.get('today_steps') != null ? box.get('today_steps')/box.get('target_steps') : 0,
                                               strokeWidth: 16,
                                               backgroundColor: Color(0xfff8f9f9),
                                             ),
@@ -1286,7 +1282,7 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver{
                                                 text: TextSpan(
                                                     children: [
                                                       TextSpan(
-                                                          text: steps=='ok' && box.get('today_steps') != null ? '${box.get('today_steps')}/${box.get('target_steps')}' : '${steps}/${box.get('target_steps')}',
+                                                          text: steps=='0' && box.get('today_steps') != null ? '${box.get('today_steps')}/${box.get('target_steps')}' : '${steps}/${box.get('target_steps')}',
                                                           style: TextStyle(
                                                             color: Colors.black,
                                                             fontWeight: FontWeight.bold,
