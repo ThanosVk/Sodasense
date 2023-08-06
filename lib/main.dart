@@ -1029,7 +1029,7 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver{
       steps=0;
     }
     else if(steps_db > 0){
-      steps = steps_db;
+      steps = box.get('today_steps');
     }
     // print('Ta vimata einai $steps');
     date = DateTime.now().millisecondsSinceEpoch;
