@@ -16,3 +16,10 @@ Sodasense is a mobile application for Android and IOS made with Flutter that reg
 - Synchronization of the local data with Mongodb database on server
 
 ## Screens of the application
+
+<p align="center">
+  <a href="url"><img src="https://github.com/ThanosVk/Sodasense/blob/master/app-main.png"  height="432" width="216"></a>
+  <a href="url"><img src="https://github.com/ThanosVk/Sodasense/blob/master/app-route-show.png"  height="432" width="216"></a>
+  <a href="url"><img src="https://github.com/ThanosVk/Sodasense/blob/master/app-route-select.png"  height="432" width="216"></a>
+  <a href="url"><img src="https://github.com/ThanosVk/Sodasense/blob/master/app-compass.png"  height="432" width="216"></a>
+</p>
