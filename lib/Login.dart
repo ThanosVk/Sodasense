@@ -258,23 +258,23 @@ class LoginState extends State<Login> {
                   //   ),
                   // ),
 
-                  // Container(
-                  //   alignment: Alignment.centerRight,
-                  //   margin: EdgeInsets.symmetric(horizontal: 40, vertical: 10),
-                  //   child: GestureDetector(
-                  //     onTap: () => {
-                  //       Navigator.push(context, MaterialPageRoute(builder: (context) => PassReset()))
-                  //     },
-                  //     child: Text(
-                  //       "Forgot your password?",
-                  //       style: TextStyle(
-                  //           fontSize: 12,
-                  //           fontWeight: FontWeight.bold,
-                  //           color: Color(0xFF2661FA)
-                  //       ),
-                  //     ),
-                  //   ),
-                  // ),
+                  Container(
+                    alignment: Alignment.centerRight,
+                    margin: EdgeInsets.symmetric(horizontal: 40, vertical: 10),
+                    child: GestureDetector(
+                      onTap: () => {
+                        Navigator.push(context, MaterialPageRoute(builder: (context) => PassReset()))
+                      },
+                      child: Text(
+                        "Forgot your password?",
+                        style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF2661FA)
+                        ),
+                      ),
+                    ),
+                  ),
 
                   SizedBox(height: size.height * 0.05),
 
@@ -428,7 +428,7 @@ class LoginState extends State<Login> {
                           Fluttertoast.showToast(msg: 'Please connect to the internet', toastLength: Toast.LENGTH_SHORT,gravity: ToastGravity.BOTTOM);
                         }
                       },
-                      style: ElevatedButton.styleFrom(onPrimary: Colors.white,
+                      style: ElevatedButton.styleFrom(foregroundColor: Colors.white,
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(80.0)),
                           padding: const EdgeInsets.all(0)),
                       child: Container(

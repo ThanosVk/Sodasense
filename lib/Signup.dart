@@ -13,6 +13,8 @@ import 'dart:convert';
 import 'package:crypto/crypto.dart';
 import 'package:http/http.dart' as http;
 
+import 'Introduction.dart';
+
 class Signup extends StatefulWidget {
   const Signup({Key? key}) : super(key: key);
 
@@ -420,8 +422,14 @@ class SignupState extends State<Signup> {
                             await box.put('pass',pass_txtController.text);
                             await box.put('userid', decoded_token['sub']);
                             await box.put('access_token', access_token);
+                            await box.put('passed', 0); //passed for checking if the user has signed on the application for the first time
 
-                            Navigator.push(context, MaterialPageRoute(builder: (context) => MyHomePage()));
+                            //to check the first login after signup so that the user requires a tutorial or not
+                            if(box.get('passed')==0){
+                              Navigator.push(context, MaterialPageRoute(builder: (context) => OnBoardingPage()));
+                            }else{
+                              Navigator.push(context, MaterialPageRoute(builder: (context) => MyHomePage()));
+                            }
                           }
                         // }
                       }
@@ -430,7 +438,7 @@ class SignupState extends State<Signup> {
                       Fluttertoast.showToast(msg: 'Please connect to the internet', toastLength: Toast.LENGTH_SHORT,gravity: ToastGravity.BOTTOM);
                     }
                   },
-                  style: ElevatedButton.styleFrom(onPrimary: Colors.white,
+                  style: ElevatedButton.styleFrom(foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(80.0)),
                       padding: const EdgeInsets.all(0)),
                   child: Container(

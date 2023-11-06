@@ -6,6 +6,7 @@ import 'package:thesis/Compass.dart';
 import 'package:thesis/Login.dart';
 import 'package:thesis/Settings.dart';
 import 'package:hive/hive.dart';
+import 'dart:io';
 
 
 class Sidemenu extends StatelessWidget {
@@ -25,11 +26,20 @@ class Sidemenu extends StatelessWidget {
               accountEmail: Text('${box.get('email')}',style: TextStyle(color: Colors.white)),
             currentAccountPicture: CircleAvatar(
               child: ClipOval(
-                child: Image.asset('assets/user.png',
-                width: 65,
-                height: 65,
-                fit: BoxFit.cover
-                ),
+                child: box.get('imagePath') != null
+                  ?
+                    Image(
+                      image: FileImage(File(box.get('imagePath', defaultValue: null))) as ImageProvider<Object>,
+                      width: 65,
+                      height: 65,
+                      fit: BoxFit.cover,
+                    )
+                  :
+                    Image.asset('assets/user.png',
+                      width: 65,
+                      height: 65,
+                      fit: BoxFit.cover
+                    ),
               ),
             ),
             decoration: BoxDecoration(

@@ -1,7 +1,10 @@
+import 'dart:convert';
+
 import 'package:email_validator/email_validator.dart';
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:thesis/Login.dart';
+import 'package:http/http.dart' as http;
 
 class PassReset extends StatefulWidget {
   const PassReset({Key? key}) : super(key: key);
@@ -118,16 +121,37 @@ class _PassResetState extends State<PassReset> {
                     alignment: Alignment.centerRight,
                     margin: EdgeInsets.symmetric(horizontal: 40, vertical: 10),
                     child: ElevatedButton(
-                      onPressed: () => {
+                      onPressed: () async {
                         if(proceed==false){
-                          Fluttertoast.showToast(msg: 'Please enter your email',toastLength: Toast.LENGTH_SHORT,gravity: ToastGravity.BOTTOM)
+                          Fluttertoast.showToast(msg: 'Please enter your email',toastLength: Toast.LENGTH_SHORT,gravity: ToastGravity.BOTTOM);
                         }
                         else{
-                          Navigator.push(context, MaterialPageRoute(builder: (context) => Login())),
-                          Fluttertoast.showToast(msg: 'An email with new password\nhas been sent to your email.',toastLength: Toast.LENGTH_SHORT,gravity: ToastGravity.BOTTOM)
+                          final response = await http.post(
+                            Uri.parse('https://api.sodasense.uop.gr/v1/userPasswordResetApp'),
+                            headers: <String, String> {
+                              'Content-Type' : 'application/json; charset=UTF-8'
+                            },
+                            body: jsonEncode(<String,String>{
+                              'email' : txtController.text,
+                            })
+                          );
+                          if (response.statusCode == 200) {
+                            Fluttertoast.showToast(
+                                msg: 'An email with new password\nhas been sent to your email.',
+                                toastLength: Toast.LENGTH_SHORT,
+                                gravity: ToastGravity.BOTTOM
+                            );
+                            // Push to the new screen
+                            Navigator.push(context, MaterialPageRoute(builder: (context) => Login()));
+                            Fluttertoast.showToast(msg: 'An email with new password\nhas been sent to your email.',toastLength: Toast.LENGTH_SHORT,gravity: ToastGravity.BOTTOM);
+                          } else {
+                            // If the server did not return a 200 OK response, throw an exception.
+                            throw Exception('Failed to load response');
+                          }
+
                         }
                       },
-                    style: ElevatedButton.styleFrom(onPrimary: Colors.white,
+                    style: ElevatedButton.styleFrom(foregroundColor: Colors.white,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(80.0)),
                         padding: const EdgeInsets.all(0)),
                       child: Container(

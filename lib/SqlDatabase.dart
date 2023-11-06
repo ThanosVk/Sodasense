@@ -320,6 +320,17 @@ class SqlDatabase{
     return result;
   }
 
+  Future select_total_steps_per_day() async {
+
+    final db = await instance.database;
+    final currentDate = DateTime.now().millisecondsSinceEpoch;
+    final endOfWeek = currentDate - 604800000;
+
+    var result = await db.rawQuery('SELECT date, steps FROM sensors WHERE date >= $endOfWeek AND date <= $currentDate GROUP BY date');
+
+    return result;
+  }
+
   Future select_altitude_unupdated() async{
 
     final db = await instance.database;

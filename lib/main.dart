@@ -1,14 +1,16 @@
 import 'dart:convert';
-
+import 'package:carousel_slider/carousel_slider.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:internet_connection_checker/internet_connection_checker.dart';
+import 'package:liquid_progress_indicator_v2/liquid_progress_indicator.dart';
 import 'package:pedometer/pedometer.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
 import 'package:proximity_sensor/proximity_sensor.dart';
 import 'package:sensors_plus/sensors_plus.dart';
+import 'package:syncfusion_flutter_charts/charts.dart';
 import 'package:thesis/Compass.dart';
 import 'package:thesis/Sensors.dart' as sens;
 import 'package:thesis/Settings.dart';
@@ -227,7 +229,14 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver{
   geo.Position ?currentPosition;
   loc.LocationData ?currentLocation;
   loc.Location location = new loc.Location();
+  //steps_dp for keeping temporary the steps for saving on Hive db
   int steps_db = 0;
+  //Each day for the daily steps chart
+  int Monday = 0, Tuesday = 0, Wednesday = 0, Thursday = 0, Friday = 0, Saturday = 0, Sunday = 0;
+
+  //data for keeping the data of the chart
+  late List<ChartData> data;
+  late TooltipBehavior _tooltip;
 
   void initForegroundTask() async {
     FlutterForegroundTask.init(
@@ -489,6 +498,12 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver{
       });
     }
     // getsensors();
+    setState(() {
+      getStepsByDay();
+      // generateData();
+    });
+
+    _tooltip = TooltipBehavior(enable: true);
   }
 
   @override
@@ -1080,6 +1095,86 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver{
     }
   }
 
+  //totalStepsPerDay to retrieve the maximum steps per day
+  getStepsByDay() async {
+
+    List<Map> sensors = await SqlDatabase.instance.select_total_steps_per_day();
+    var arr = Map<String,int>();
+    String tmp='';
+
+    for(int i=0; i<sensors.length ; i++){
+      tmp = DateFormat.yMMMMEEEEd().add_Hms().format(DateTime.fromMillisecondsSinceEpoch(sensors[i]['date'])) as String;
+      arr[tmp] = sensors[i]['steps'];
+    }
+
+    // arr.forEach((k, v) => print("Key : $k, Value : $v"));
+    arr.forEach((key, value) {
+      if(key.contains('Monday')){
+        Monday > value ? Monday : Monday = value;
+      }
+      else if(key.contains('Tuesday')){
+        Tuesday > value ? Tuesday : Tuesday = value;
+      }
+      else if(key.contains('Wednesday')){
+        Wednesday > value ? Wednesday : Wednesday = value;
+      }
+      else if(key.contains('Thursday')){
+        Thursday > value ? Thursday : Thursday = value;
+      }
+      else if(key.contains('Friday')){
+        Friday > value ? Friday : Friday = value;
+      }
+      else if(key.contains('Saturday')){
+        Saturday > value ? Saturday : Saturday = value;
+      }
+      else if(key.contains('Sunday')){
+        Sunday > value ? Sunday : Sunday = value;
+      }
+    });
+
+    generateData();
+  }
+
+  void generateData() {
+    DateTime currentDate = DateTime.now();
+    DateTime startOfWeek = currentDate.subtract(Duration(days: currentDate.weekday - 1));
+    DateTime endOfWeek = startOfWeek.add(Duration(days: 7)); // changed from 6 to 7
+
+    List<ChartData> generatedData = [];
+
+    for (int i = 0; i < 7; i++) {
+      DateTime date = startOfWeek.add(Duration(days: i));
+      String dayOfWeek = DateFormat('EEE').format(date); // Three-letter day abbreviation
+      String formattedDate = DateFormat('dd/MM').format(date); // dd/mm format
+      generatedData.add(ChartData('$dayOfWeek\n$formattedDate', getStepCountForDate(date)));
+    }
+
+    data = generatedData;
+  }
+
+  int getStepCountForDate(DateTime date) {
+    // Replace this with your logic to get step count for the given date
+    // For example, you could use a map or database to store step data
+    // and retrieve it based on the date.
+    String dayOfWeekfullname = DateFormat('EEEE').format(date);
+    //Monday = 50; // android studio emulator test
+    //Tuesday = 30;
+    Map<String, int> dayToStepMap = {
+      'Monday': Monday,
+      'Tuesday': Tuesday,
+      'Wednesday': Wednesday,
+      'Thursday': Thursday,
+      'Friday': Friday,
+      'Saturday': Saturday,
+      'Sunday': Sunday,
+    };
+
+    int daysteps = dayToStepMap[dayOfWeekfullname] ?? 0;
+    print('Ta vimata pare $Monday, $Tuesday, $Wednesday, $Thursday, $Friday, $Saturday, $Sunday');
+
+    return daysteps;
+  }
+
   @override
   Widget build(BuildContext context) {
 
@@ -1136,200 +1231,267 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver{
 
                   Builder(builder: (context){
                     if(hasPermissions){
-                      return Card(
-                        shadowColor: Colors.grey,
-                        elevation: 10,
-                        clipBehavior: Clip.antiAlias,
-                        margin: EdgeInsets.only(left: 10, right: 10),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(40),
-                        ),
-                        child: Container(
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [Colors.white, Colors.white],
-                              begin: Alignment.topCenter,
-                              end: Alignment.bottomCenter,
-                            ),
+                      return SizedBox(
+                        height: 320,
+                        child: Card(
+                          shadowColor: Colors.grey,
+                          elevation: 10,
+                          clipBehavior: Clip.antiAlias,
+                          margin: EdgeInsets.only(left: 10, right: 10),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(40),
                           ),
-                          padding: EdgeInsets.all(16),
-                          child: Column(
-                            children: [
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                // crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Column(
-                                    children: [
-                                      RichText(
-                                        text: TextSpan(
-                                            children: [
-                                              TextSpan(
-                                                  text: 'Today',
-                                                  style: TextStyle(
-                                                      fontWeight: FontWeight.bold,
-                                                      color: Colors.black,
-                                                      fontSize: 26
-                                                  )
+                          child: CarouselSlider(
+                            carouselController: CarouselController(),
+                            options: CarouselOptions(
+                              reverse: true,
+                              height: 300,
+                              scrollDirection: Axis.horizontal,
+                              enlargeCenterPage: true,
+                              enlargeStrategy: CenterPageEnlargeStrategy.height,
+                              enableInfiniteScroll: false,
+                              initialPage: 1,
+                              enlargeFactor: 1.5,
+                              viewportFraction: 1,
+                              disableCenter: true,
+                            ),
+                            items: [
+                              Container(
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  mainAxisSize: MainAxisSize.max,
+                                  children: <Widget>[
+                                    Center(
+                                        child: Container(
+                                            child: SfCartesianChart(
+                                              primaryXAxis: CategoryAxis(
+                                                majorGridLines: MajorGridLines(color: Colors.transparent),
+                                                labelIntersectAction: AxisLabelIntersectAction.rotate45,
+                                                labelStyle: TextStyle(
+                                                  color: Colors.black,
+                                                  fontSize: 14,
+                                                ),
                                               ),
-                                            ]
-                                        ),
-                                      )
-                                    ],
-                                  ),
-                                  Column(
-                                    children: [
-                                      IconButton(
-                                        onPressed: () => {
-                                          showDialog(context: context, builder: (context) => StatefulBuilder(
-                                              builder: (BuildContext context, StateSetter setState) {
-                                              return AlertDialog(
-                                                title: Text('Set your daily target\nor change your height',
-                                                    textAlign: TextAlign.justify
+                                              primaryYAxis: NumericAxis(
+                                                minimum: 0,
+                                                maximum: box.get('target_steps').toDouble() + 100,
+                                                interval: box.get('target_steps').toDouble()/10,
+                                                majorGridLines: MajorGridLines(color: Colors.transparent), // Hide minor tick lines
+                                                labelIntersectAction: AxisLabelIntersectAction.rotate45,
+                                                labelStyle: TextStyle(
+                                                  color: Colors.black,
+                                                  fontSize: 10,
                                                 ),
-                                                content: SizedBox(
-                                                  child: Column(
-                                                    mainAxisSize: MainAxisSize.min,
-                                                    children: [
-                                                      TextField(
-                                                        maxLength: 5,
-                                                        controller: stepController,
-                                                        keyboardType: TextInputType.number,
-                                                        decoration: InputDecoration(
-                                                          labelText: "Steps Target",
-                                                          counterText: '',
-                                                          hintText: box.get('target_steps') == null ? "" : "${box.get('target_steps')}"
-                                                        ),
-                                                      ),
-                                                      TextField(
-                                                        maxLength: 3,
-                                                        controller: heightController,
-                                                        decoration: InputDecoration(
-                                                          labelText: "Height in cm",
-                                                          errorText: height_validate ? null: Height_Textfield_check(),
-                                                          counterText: '',
-                                                          hintText: box.get('height') == null ? "" : "${box.get('height')}"
-                                                        ),
-                                                        keyboardType: TextInputType.number,
-                                                        onChanged: (text) => setState(() {
-                                                          height_validate = height_error_msg();
-                                                        }),
-                                                      ),
-                                                    ],
-                                                  ),
-                                                ),
-                                                actions: [
-                                                  ElevatedButton(onPressed: () => {
-                                                    if(stepController.text.isEmpty == false && heightController.text.isEmpty == false && int.parse(heightController.text) <= 250){
-                                                      if(isSelected[0]==true){
-                                                        height = int.parse(heightController.text),
-                                                        steps_length = (height * 0.415) / 100,// /100 to make it in meters
-                                                        print('male')
-                                                      }
-                                                      else{
-                                                        height = int.parse(heightController.text),
-                                                        steps_length = (height * 0.413) / 100,// /100 to make it in meters
-                                                        print('female')
-                                                      },
-                                                      steps_target = int.parse(stepController.text),
-                                                      user.steps_length = steps_length,
-                                                      user.height = height,
-                                                      user.target_steps = steps_target,
-                                                      box.put('height',user.height),
-                                                      box.put('steps_length',user.steps_length),
-                                                      box.put('target_steps',user.target_steps),
-                                                      // user?.save(),
-                                                      stepController.clear(),
-                                                      heightController.clear(),
-                                                      Navigator.pop(context,steps_target),
-                                                    }
-                                                  },child: Text('Ok')),
-                                                ],
-                                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.0)),
+                                              ),
+                                              tooltipBehavior: _tooltip,
+                                              series: <ChartSeries<ChartData, String>>[
+                                                ColumnSeries<ChartData, String>(
+                                                  dataSource: data,
+                                                  xValueMapper: (ChartData data, _) => data.x,
+                                                  yValueMapper: (ChartData data, _) => data.y,
+                                                  name: 'Steps',
+                                                  color:Colors.cyan,
 
-                                              );
-                                            }
-                                          ),
-                                          )
-                                        },
-                                        icon: FaIcon(FontAwesomeIcons.bullseye),
-                                        color: isDarkMode == true ? Colors.black: Colors.black,
-                                      )
-                                    ],
-                                  )
-                                ],
+                                                ),
+
+                                              ],
+                                            )
+                                        )
+                                    )
+                                  ],
+                                ),
                               ),
-
-                              SizedBox(height: size.height * 0.03),
-
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: <Widget>[
-                                  Center(
-                                    child: Container(
-                                        height: 160,
-                                        width: 160,
-                                        child: Stack(
-                                          fit: StackFit.expand,
+                              Container(
+                                width: double.maxFinite,
+                                margin: EdgeInsets.symmetric(horizontal: 20),
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    colors: [Colors.white, Colors.white],
+                                    begin: Alignment.topCenter,
+                                    end: Alignment.bottomCenter,
+                                  ),
+                                ),
+                                padding: EdgeInsets.all(16),
+                                child: Column(
+                                  children: [
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      // crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Column(
                                           children: [
-                                            CircularProgressIndicator(
-                                              value:steps=='0' && box.get('today_steps') != null ? box.get('today_steps')/box.get('target_steps') : 0,
-                                              strokeWidth: 16,
-                                              backgroundColor: Color(0xfff8f9f9),
-                                            ),
-                                            Center(
-                                              child: RichText(
-                                                text: TextSpan(
-                                                    children: [
-                                                      TextSpan(
-                                                          text: steps=='0' && box.get('today_steps') != null ? '${box.get('today_steps')}/${box.get('target_steps')}' : '${steps}/${box.get('target_steps')}',
-                                                          style: TextStyle(
-                                                            color: Colors.black,
+                                            RichText(
+                                              text: TextSpan(
+                                                  children: [
+                                                    TextSpan(
+                                                        text: 'Today',
+                                                        style: TextStyle(
                                                             fontWeight: FontWeight.bold,
-                                                          )
-                                                      ),
-                                                      WidgetSpan(
-                                                          child: RotatedBox(
-                                                              quarterTurns: 3,
-                                                              child: FaIcon(FontAwesomeIcons.shoePrints, size: 12,color: isDarkMode == true ? Colors.black: Colors.black,)
-                                                          )
-                                                      )
-                                                    ]
-                                                ),
+                                                            color: Colors.black,
+                                                            fontSize: 26
+                                                        )
+                                                    ),
+                                                  ]
                                               ),
                                             )
                                           ],
+                                        ),
+                                        Column(
+                                          children: [
+                                            IconButton(
+                                              onPressed: () => {
+                                                showDialog(context: context, builder: (context) => StatefulBuilder(
+                                                    builder: (BuildContext context, StateSetter setState) {
+                                                      return AlertDialog(
+                                                        title: Text('Set your daily target\nor change your height',
+                                                            textAlign: TextAlign.justify
+                                                        ),
+                                                        content: SizedBox(
+                                                          child: Column(
+                                                            mainAxisSize: MainAxisSize.min,
+                                                            children: [
+                                                              TextField(
+                                                                maxLength: 5,
+                                                                controller: stepController,
+                                                                keyboardType: TextInputType.number,
+                                                                decoration: InputDecoration(
+                                                                    labelText: "Steps Target",
+                                                                    counterText: '',
+                                                                    hintText: box.get('target_steps') == null ? "" : "${box.get('target_steps')}"
+                                                                ),
+                                                              ),
+                                                              TextField(
+                                                                maxLength: 3,
+                                                                controller: heightController,
+                                                                decoration: InputDecoration(
+                                                                    labelText: "Height in cm",
+                                                                    errorText: height_validate ? null: Height_Textfield_check(),
+                                                                    counterText: '',
+                                                                    hintText: box.get('height') == null ? "" : "${box.get('height')}"
+                                                                ),
+                                                                keyboardType: TextInputType.number,
+                                                                onChanged: (text) => setState(() {
+                                                                  height_validate = height_error_msg();
+                                                                }),
+                                                              ),
+                                                            ],
+                                                          ),
+                                                        ),
+                                                        actions: [
+                                                          ElevatedButton(onPressed: () => {
+                                                            if(stepController.text.isEmpty == false && heightController.text.isEmpty == false && int.parse(heightController.text) <= 250){
+                                                              if(isSelected[0]==true){
+                                                                height = int.parse(heightController.text),
+                                                                steps_length = (height * 0.415) / 100,// /100 to make it in meters
+                                                                print('male')
+                                                              }
+                                                              else{
+                                                                height = int.parse(heightController.text),
+                                                                steps_length = (height * 0.413) / 100,// /100 to make it in meters
+                                                                print('female')
+                                                              },
+                                                              steps_target = int.parse(stepController.text),
+                                                              user.steps_length = steps_length,
+                                                              user.height = height,
+                                                              user.target_steps = steps_target,
+                                                              box.put('height',user.height),
+                                                              box.put('steps_length',user.steps_length),
+                                                              box.put('target_steps',user.target_steps),
+                                                              // user?.save(),
+                                                              stepController.clear(),
+                                                              heightController.clear(),
+                                                              Navigator.pop(context,steps_target),
+                                                            }
+                                                          },child: Text('Ok')),
+                                                        ],
+                                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.0)),
+
+                                                      );
+                                                    }
+                                                ),
+                                                )
+                                              },
+                                              icon: FaIcon(FontAwesomeIcons.bullseye),
+                                              color: isDarkMode == true ? Colors.black: Colors.black,
+                                            )
+                                          ],
                                         )
+                                      ],
                                     ),
-                                  ),
-                                ],
-                              ),
 
-                              SizedBox(height: size.height * 0.03),
+                                    SizedBox(height: size.height * 0.03),
 
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Text('$dist',
-                                    style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 14
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: <Widget>[
+                                        Center(
+                                          child: Container(
+                                              height: 160,
+                                              width: 160,
+                                              child: Stack(
+                                                fit: StackFit.expand,
+                                                children: [
+                                                  LiquidCircularProgressIndicator(
+                                                      value:steps=='0' && box.get('today_steps') != null ? box.get('today_steps')/box.get('target_steps') : 0,
+                                                      backgroundColor: Color(0xfff8f9f9),
+                                                      direction: Axis.vertical
+                                                  ),
+                                                  Center(
+                                                    child: RichText(
+                                                      text: TextSpan(
+                                                          children: [
+                                                            TextSpan(
+                                                                text: steps=='0' && box.get('today_steps') != null ? '${box.get('today_steps')}/${box.get('target_steps')}' : '${steps}/${box.get('target_steps')}',
+                                                                style: TextStyle(
+                                                                  color: Colors.black,
+                                                                  fontWeight: FontWeight.bold,
+                                                                )
+                                                            ),
+                                                            WidgetSpan(
+                                                                child: RotatedBox(
+                                                                    quarterTurns: 3,
+                                                                    child: FaIcon(FontAwesomeIcons.shoePrints, size: 12,color: isDarkMode == true ? Colors.black: Colors.black,)
+                                                                )
+                                                            )
+                                                          ]
+                                                      ),
+                                                    ),
+                                                  )
+                                                ],
+                                              )
+                                          ),
+                                        ),
+                                      ],
                                     ),
-                                  ),
-                                ],
+
+                                    SizedBox(height: size.height * 0.03),
+
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Text('$dist',
+                                          style: TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 14
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Text('Km by steps',
+                                            style: TextStyle(
+                                              //fontWeight: FontWeight.bold,
+                                                color: Colors.black,
+                                                fontSize: 14
+                                            )
+                                        )
+                                      ],
+                                    ),
+                                  ],
+                                ),
                               ),
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Text('Km by steps',
-                                      style: TextStyle(
-                                        //fontWeight: FontWeight.bold,
-                                          color: Colors.black,
-                                          fontSize: 14
-                                      )
-                                  )
-                                ],
-                              )
                             ],
                           ),
                         ),
@@ -1725,4 +1887,11 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver{
     );
   }
 
+}
+
+class ChartData {
+  ChartData(this.x, this.y);
+
+  final String x;
+  final int y;
 }

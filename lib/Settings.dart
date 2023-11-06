@@ -4,10 +4,10 @@ import 'package:fluttertoast/fluttertoast.dart';
 import 'package:hive/hive.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:sqflite/sqflite.dart';
+import 'package:thesis/EditProfile.dart';
 import 'package:thesis/Sidemenu.dart';
 import 'package:provider/provider.dart';
 import 'package:thesis/Theme_provider.dart';
-import 'package:thesis/main.dart';
 
 class Settings extends StatefulWidget {
   const Settings({Key? key}) : super(key: key);
@@ -134,6 +134,19 @@ class _SettingsState extends State<Settings> {
                   final provider = Provider.of<ThemeProvider>(context,listen: false);
                   provider.toggleTheme(value);
                 }
+              ),
+            ),
+            Card(
+              shadowColor: Colors.grey,
+              elevation: 10,
+              clipBehavior: Clip.antiAlias,
+              margin: EdgeInsets.only(left: 10, right: 10,bottom: 10,top: 10),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(40),
+              ),
+              child: ListTile(
+                title: Text('Edit profile'),
+                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => EditProfile()))
               ),
             ),
             Card(
