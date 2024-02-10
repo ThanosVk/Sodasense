@@ -3,14 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:thesis/main.dart';
 import 'package:introduction_screen/introduction_screen.dart';
 
-
 class OnBoardingPage extends StatefulWidget {
   const OnBoardingPage({Key? key}) : super(key: key);
 
   @override
   OnBoardingPageState createState() => OnBoardingPageState();
 }
-
 
 class OnBoardingPageState extends State<OnBoardingPage> {
   final introKey = GlobalKey<IntroductionScreenState>();
@@ -20,7 +18,6 @@ class OnBoardingPageState extends State<OnBoardingPage> {
       MaterialPageRoute(builder: (_) => MyHomePage()), //Goes to main screen
     );
   }
-
 
   Widget _buildImage(String assetName, [double width = 250]) {
     return Image.asset('assets/$assetName', width: width);
@@ -38,7 +35,7 @@ class OnBoardingPageState extends State<OnBoardingPage> {
       imagePadding: EdgeInsets.zero,
     );
 
-    box.put('passed',1);
+    box.put('passed', 1);
 
     return IntroductionScreen(
       key: introKey,
@@ -129,7 +126,6 @@ class OnBoardingPageState extends State<OnBoardingPage> {
           decoration: pageDecoration,
         ),
       ],
-
 
       onDone: () => _onIntroEnd(context),
       onSkip: () => _onIntroEnd(context), // You can override onSkip callback

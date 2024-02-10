@@ -18,19 +18,24 @@ class Compass extends StatefulWidget {
 }
 
 class _CompassState extends State<Compass> {
-
-  bool hasPermissions = false, serviceEnabled = false;//hasPermissions if the gps permissions are given, serviceEnabled if the gps is enabled
-  double angle = 0,Altitude =0;//angle for getting the angles, Altitude for getting the altitude value from plugin
-  String Address = '-',adr = '-';//Address for getting the value from plugin, adr for printing the address
-  String location ='-', loc = '-';//location for getting the value from plugin, loc for printing the location
-  String alt = '-';//alt for printing the altitude
-  Timer ?timer;
-  var box = Hive.box('user'),lat, lng;
-  int art = 5;//art for altitude sampling rate
+  bool hasPermissions = false,
+      serviceEnabled =
+          false; //hasPermissions if the gps permissions are given, serviceEnabled if the gps is enabled
+  double angle = 0,
+      Altitude =
+          0; //angle for getting the angles, Altitude for getting the altitude value from plugin
+  String Address = '-',
+      adr =
+          '-'; //Address for getting the value from plugin, adr for printing the address
+  String location = '-',
+      loc =
+          '-'; //location for getting the value from plugin, loc for printing the location
+  String alt = '-'; //alt for printing the altitude
+  Timer? timer;
+  var box = Hive.box('user'), lat, lng;
+  int art = 5; //art for altitude sampling rate
   //Date for using date in the database
   int date = 0;
-
-
 
   @override
   void initState() {
@@ -44,11 +49,12 @@ class _CompassState extends State<Compass> {
       getData();
     });
 
-    if(box.get('altitude_sr')!=null){
+    if (box.get('altitude_sr') != null) {
       art = box.get('altitude_sr');
     }
 
-    timer = Timer.periodic(Duration(seconds: art), (Timer t) => insert_altitude_toDb());
+    timer = Timer.periodic(
+        Duration(seconds: art), (Timer t) => insert_altitude_toDb());
     //check();
   }
 
@@ -64,10 +70,9 @@ class _CompassState extends State<Compass> {
   //Function for getting the angles of compass
   void get_angle(event) {
     setState(() {
-      if(event.heading>0){
+      if (event.heading > 0) {
         angle = event.heading;
-      }
-      else{
+      } else {
         angle = event.heading + 360;
       }
     });
@@ -75,28 +80,30 @@ class _CompassState extends State<Compass> {
 
   //Function for getting the status of Gps
   Future<Position> getGeoLocationPosition() async {
-
     serviceEnabled = await Geolocator.isLocationServiceEnabled();
 
-    return await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.best);
+    return await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.best);
   }
 
   //Function for getting lat lng and
-  Future<void> GetAddressFromLatLong(Position position)async {
-    List<Placemark> placemarks = await placemarkFromCoordinates(position.latitude, position.longitude);
+  Future<void> GetAddressFromLatLong(Position position) async {
+    List<Placemark> placemarks =
+        await placemarkFromCoordinates(position.latitude, position.longitude);
     double alt_placemarks = await position.altitude;
     print(placemarks);
     Placemark place = placemarks[0];
-    setState(()  {
-      Address = '${place.street}, ${place.locality}, ${place.postalCode}, ${place.country}';
+    setState(() {
+      Address =
+          '${place.street}, ${place.locality}, ${place.postalCode}, ${place.country}';
     });
   }
 
   //Function for setting address and location
   void getData() async {
     Position position = await getGeoLocationPosition();
-    lat=position.latitude.toStringAsFixed(4);
-    lng=position.longitude.toStringAsFixed(4);
+    lat = position.latitude.toStringAsFixed(4);
+    lng = position.longitude.toStringAsFixed(4);
     //location ='Lat: ${(position.latitude).toStringAsFixed(4)} , Long: ${(position.longitude).toStringAsFixed(4)}';
     Altitude = position.altitude;
 
@@ -104,62 +111,60 @@ class _CompassState extends State<Compass> {
     GetAddressFromLatLong(position);
   }
 
-  void insert_altitude_toDb() async{
+  void insert_altitude_toDb() async {
     date = DateTime.now().millisecondsSinceEpoch;
-    await SqlDatabase.instance.insert_altitude(date,Altitude,0);
+    await SqlDatabase.instance.insert_altitude(date, Altitude, 0);
     print('KOMPLE TO ALT');
   }
 
-  void check() async{
+  void check() async {
     List<Map> lista = await SqlDatabase.instance.select_altitude();
     print(lista);
   }
 
   @override
   Widget build(BuildContext context) {
-
     Size size = MediaQuery.of(context).size;
 
     return Scaffold(
       drawer: Sidemenu(),
       appBar: AppBar(
-        title:Text("Compass"),
+        title: Text("Compass"),
         actions: <Widget>[
           IconButton(
               alignment: Alignment.center,
               icon: Icon(Icons.location_on_outlined),
-              onPressed: ()  =>
-              {
-                getData(),
-                if(serviceEnabled == true){
-                  setState(() {
-                    // loc = location;
-                    adr = Address;
-                    alt = '$Altitude';
-                  }),
-                }
-                else{
-                  print(serviceEnabled),
-                  setState(() {
-                    loc ='Enable gps to get coordinates';
-                    adr ='Connect to internet to get Adrress';
-                    alt = 'Enable gps to get altitude';
-                  }),
-                }
-              }
-          )
+              onPressed: () => {
+                    getData(),
+                    if (serviceEnabled == true)
+                      {
+                        setState(() {
+                          // loc = location;
+                          adr = Address;
+                          alt = '$Altitude';
+                        }),
+                      }
+                    else
+                      {
+                        print(serviceEnabled),
+                        setState(() {
+                          loc = 'Enable gps to get coordinates';
+                          adr = 'Connect to internet to get Adrress';
+                          alt = 'Enable gps to get altitude';
+                        }),
+                      }
+                  })
         ],
       ),
       body: SafeArea(
         child: Center(
           child: Builder(builder: (context) {
-            if(hasPermissions){
-              if(serviceEnabled){
+            if (hasPermissions) {
+              if (serviceEnabled) {
                 loc = location;
                 adr = Address;
                 alt = '$Altitude';
-              }
-              else{
+              } else {
                 loc = 'Enable gps to get Location';
                 adr = 'Connect to internet to get Adrress';
                 alt = 'Enable gps to get altitude';
@@ -174,11 +179,13 @@ class _CompassState extends State<Compass> {
                         // style: const TextStyle(
                         //   color: Colors.black,
                         // ),
-                      children: <TextSpan>[
-                        TextSpan(text: 'Adrress: ',style: const TextStyle(fontWeight: FontWeight.bold)),
-                        TextSpan(text: '$adr'),
-                      ]
-                    ),
+                        children: <TextSpan>[
+                          TextSpan(
+                              text: 'Adrress: ',
+                              style:
+                                  const TextStyle(fontWeight: FontWeight.bold)),
+                          TextSpan(text: '$adr'),
+                        ]),
                     textAlign: TextAlign.center,
                   ),
                   Text.rich(
@@ -186,16 +193,20 @@ class _CompassState extends State<Compass> {
                         // style: const TextStyle(
                         //   color: Colors.black,
                         // ),
-                        children: serviceEnabled==true  ? [
-                          TextSpan(text: 'Lat: ',style: const TextStyle(fontWeight: FontWeight.bold)),
-                          TextSpan(text: '${lat},'),
-                          TextSpan(text: ' Lon: ',style: const TextStyle(fontWeight: FontWeight.bold)),
-                          TextSpan(text: '${lng}'),
-                        ]
-                        : [
-                          TextSpan(text: '$loc')
-                        ]
-                    ),
+                        children: serviceEnabled == true
+                            ? [
+                                TextSpan(
+                                    text: 'Lat: ',
+                                    style: const TextStyle(
+                                        fontWeight: FontWeight.bold)),
+                                TextSpan(text: '${lat},'),
+                                TextSpan(
+                                    text: ' Lon: ',
+                                    style: const TextStyle(
+                                        fontWeight: FontWeight.bold)),
+                                TextSpan(text: '${lng}'),
+                              ]
+                            : [TextSpan(text: '$loc')]),
                   ),
                   Text.rich(
                     TextSpan(
@@ -203,16 +214,17 @@ class _CompassState extends State<Compass> {
                         //   color: Colors.black,
                         // ),
                         children: <TextSpan>[
-                          TextSpan(text: 'Altitude: ',style: const TextStyle(fontWeight: FontWeight.bold)),
+                          TextSpan(
+                              text: 'Altitude: ',
+                              style:
+                                  const TextStyle(fontWeight: FontWeight.bold)),
                           TextSpan(text: '$alt'),
-                        ]
-                    ),
+                        ]),
                   ),
                   //Build_Adrress(),
                 ],
               );
-            }
-            else {
+            } else {
               return buildPermissionSheet();
             }
           }),
@@ -284,8 +296,7 @@ class _CompassState extends State<Compass> {
           ElevatedButton(
             child: Text('Open App Settings'),
             onPressed: () {
-              openAppSettings().then((opened) {
-              });
+              openAppSettings().then((opened) {});
             },
           )
         ],

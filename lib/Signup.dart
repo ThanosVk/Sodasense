@@ -137,9 +137,9 @@ class SignupState extends State<Signup> {
         return pass_msg;
       }
       else{
-          pass_check=true;
-          pass_msg='Valid password';
-          print(pass_msg);
+        pass_check=true;
+        pass_msg='Valid password';
+        print(pass_msg);
       }
     }
   }
@@ -300,12 +300,12 @@ class SignupState extends State<Signup> {
                 child: TextField(
                   controller: pass_txtController,
                   decoration: InputDecoration(
-                    labelText: "Password",
-                    errorText: pass_validate ? null : Pass_Textfield_check(),
-                    suffix: InkWell(
-                      onTap: ChangeView,
-                      child: Icon(pass_hidden ? Icons.visibility_off : Icons.visibility),
-                    )
+                      labelText: "Password",
+                      errorText: pass_validate ? null : Pass_Textfield_check(),
+                      suffix: InkWell(
+                        onTap: ChangeView,
+                        child: Icon(pass_hidden ? Icons.visibility_off : Icons.visibility),
+                      )
                   ),
                   onChanged: (text) => setState(() {
                     pass_validate = pass_error_msg();
@@ -322,12 +322,12 @@ class SignupState extends State<Signup> {
                 child: TextField(
                   controller: confpass_txtController,
                   decoration: InputDecoration(
-                    labelText: "Confirm Password",
-                    errorText: conf_validate ? null : Conf_Textfield_check(),
-                    suffix: InkWell(
-                      onTap: ChangeViewConf,
-                      child: Icon(conf_hidden ? Icons.visibility_off : Icons.visibility),
-                    )
+                      labelText: "Confirm Password",
+                      errorText: conf_validate ? null : Conf_Textfield_check(),
+                      suffix: InkWell(
+                        onTap: ChangeViewConf,
+                        child: Icon(conf_hidden ? Icons.visibility_off : Icons.visibility),
+                      )
                   ),
                   onChanged: (text) => setState(() {
                     conf_validate = conf_error_msg();
@@ -370,67 +370,67 @@ class SignupState extends State<Signup> {
                         //     'Hashed password': hashed_pass,
                         //     'Salt':salt
                         //   });
-                          var response = await http.post(Uri.parse('https://api.sodasense.uop.gr/v1/userRegister'),
+                        var response = await http.post(Uri.parse('https://api.sodasense.uop.gr/v1/userRegister'),
                             body: jsonEncode(<String, String>{
                               "email":mail_txtController.text,
                               "username":user_txtController.text,
                               "lastname":user_txtController.text,
                               "firstname":user_txtController.text,
                               "password":pass_txtController.text
-                          }));
-                          print('Status code: ${response.statusCode}');
-                          print('Response body: ${response.body}');
-                          print('Reason phrase: ${response.reasonPhrase}');
-                          if(response.body.contains('User exists with same username') == true){
-                            print('Unsuccessful registration!!');
-                            Fluttertoast.showToast(msg: 'Username already in use', toastLength: Toast.LENGTH_SHORT,gravity: ToastGravity.BOTTOM);
+                            }));
+                        print('Status code: ${response.statusCode}');
+                        print('Response body: ${response.body}');
+                        print('Reason phrase: ${response.reasonPhrase}');
+                        if(response.body.contains('User exists with same username') == true){
+                          print('Unsuccessful registration!!');
+                          Fluttertoast.showToast(msg: 'Username already in use', toastLength: Toast.LENGTH_SHORT,gravity: ToastGravity.BOTTOM);
+                        }
+                        else if(response.body.contains('User exists with same email') == true){
+                          print('Unsuccessful registration!!');
+                          Fluttertoast.showToast(msg: 'Email already in use', toastLength: Toast.LENGTH_SHORT,gravity: ToastGravity.BOTTOM);
+                        }
+                        else if(response.statusCode == 200 && response.reasonPhrase == 'OK' && response.body.contains('User exists with same username') == false && response.body.contains('User exists with same email') == false){
+                          print('Successful registration!!');
+
+                          var responsee= await http.post(Uri.parse('https://api.sodasense.uop.gr/v1/userLogin'),
+                              body: jsonEncode(<String, String>{
+                                "username": mail_txtController.text,
+                                "password": pass_txtController.text
+                              }));
+
+                          var box = Hive.box('user');
+                          var token_parts = responsee.body.split('.');
+                          Map<String, dynamic> map = jsonDecode(responsee.body);
+                          // print(map);
+                          String access_token = map['access_token'].toString();
+                          // print(access_token);
+                          //Base64 requires string multiple of 4 in order to have 0 remainder with mod division
+                          if(token_parts[1].length % 4 == 1){
+                            token_parts[1] = token_parts[1] + '===';
                           }
-                          else if(response.body.contains('User exists with same email') == true){
-                            print('Unsuccessful registration!!');
-                            Fluttertoast.showToast(msg: 'Email already in use', toastLength: Toast.LENGTH_SHORT,gravity: ToastGravity.BOTTOM);
+                          else if(token_parts[1].length % 4 == 2){
+                            token_parts[1] = token_parts[1] + '==';
                           }
-                          else if(response.statusCode == 200 && response.reasonPhrase == 'OK' && response.body.contains('User exists with same username') == false && response.body.contains('User exists with same email') == false){
-                            print('Successful registration!!');
-
-                            var responsee= await http.post(Uri.parse('https://api.sodasense.uop.gr/v1/userLogin'),
-                                body: jsonEncode(<String, String>{
-                                  "username": mail_txtController.text,
-                                  "password": pass_txtController.text
-                                }));
-
-                            var box = Hive.box('user');
-                            var token_parts = responsee.body.split('.');
-                            Map<String, dynamic> map = jsonDecode(responsee.body);
-                            // print(map);
-                            String access_token = map['access_token'].toString();
-                            // print(access_token);
-                            //Base64 requires string multiple of 4 in order to have 0 remainder with mod division
-                            if(token_parts[1].length % 4 == 1){
-                              token_parts[1] = token_parts[1] + '===';
-                            }
-                            else if(token_parts[1].length % 4 == 2){
-                              token_parts[1] = token_parts[1] + '==';
-                            }
-                            else if(token_parts[1].length % 4 == 3){
-                              token_parts[1] = token_parts[1] + '=';
-                            }
-                            var jsontext = base64.decode(token_parts[1]);
-                            Map<String,dynamic> decoded_token= jsonDecode(utf8.decode(jsontext));
-
-                            // print(decoded_token);
-                            await box.put('email',mail_txtController.text);
-                            await box.put('pass',pass_txtController.text);
-                            await box.put('userid', decoded_token['sub']);
-                            await box.put('access_token', access_token);
-                            await box.put('passed', 0); //passed for checking if the user has signed on the application for the first time
-
-                            //to check the first login after signup so that the user requires a tutorial or not
-                            if(box.get('passed')==0){
-                              Navigator.push(context, MaterialPageRoute(builder: (context) => OnBoardingPage()));
-                            }else{
-                              Navigator.push(context, MaterialPageRoute(builder: (context) => MyHomePage()));
-                            }
+                          else if(token_parts[1].length % 4 == 3){
+                            token_parts[1] = token_parts[1] + '=';
                           }
+                          var jsontext = base64.decode(token_parts[1]);
+                          Map<String,dynamic> decoded_token= jsonDecode(utf8.decode(jsontext));
+
+                          // print(decoded_token);
+                          await box.put('email',mail_txtController.text);
+                          await box.put('pass',pass_txtController.text);
+                          await box.put('userid', decoded_token['sub']);
+                          await box.put('access_token', access_token);
+                          await box.put('passed', 0); //passed for checking if the user has signed on the application for the first time
+
+                          //to check the first login after signup so that the user requires a tutorial or not
+                          if(box.get('passed')==0){
+                            Navigator.push(context, MaterialPageRoute(builder: (context) => OnBoardingPage()));
+                          }else{
+                            Navigator.push(context, MaterialPageRoute(builder: (context) => MyHomePage()));
+                          }
+                        }
                         // }
                       }
                     }

@@ -152,10 +152,8 @@ class LoginState extends State<Login> {
     //WillPopScope is a method for handling back button
     return WillPopScope(
       onWillPop: () async {
-
-        // final popup = await showWarning(context);
-
-        return false;
+        final shouldCloseApp = await showWarning(context);
+        return shouldCloseApp ?? false;
       },
       child: Scaffold(
           resizeToAvoidBottomInset : true,
@@ -206,12 +204,12 @@ class LoginState extends State<Login> {
                     child: TextField(
                       controller: pass_txtController,
                       decoration: InputDecoration(
-                        labelText: "Password",
-                        errorText: pass_validate ? null : Pass_Textfield_check(),
-                        suffix: InkWell(
-                          onTap: ChangeView,
-                          child: Icon(pass_hidden ? Icons.visibility_off : Icons.visibility),
-                        )
+                          labelText: "Password",
+                          errorText: pass_validate ? null : Pass_Textfield_check(),
+                          suffix: InkWell(
+                            onTap: ChangeView,
+                            child: Icon(pass_hidden ? Icons.visibility_off : Icons.visibility),
+                          )
                       ),
                       onChanged: (text) => setState(() {
                         pass_validate = pass_error_msg();
