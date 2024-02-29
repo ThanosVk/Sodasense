@@ -3,8 +3,7 @@ import 'package:hive/hive.dart';
 //part 'User.g.dart';
 
 @HiveType(typeId: 0)
-class User extends HiveObject{
-
+class User extends HiveObject {
   @HiveField(0)
   late String username;
 
@@ -61,6 +60,4 @@ class User extends HiveObject{
 
   @HiveField(18)
   late bool theme;
-
-
 }

@@ -7,7 +7,6 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:fluttertoast/fluttertoast.dart';
 
-
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final appDocumentDir = await path_provider.getApplicationDocumentsDirectory();
@@ -41,7 +40,8 @@ class EditProfileState extends State<EditProfile> {
   void initState() {
     super.initState();
 
-    var userValue = box.get(0) as ProfileUser? ?? ProfileUser(username: '', email: '');
+    var userValue =
+        box.get(0) as ProfileUser? ?? ProfileUser(username: '', email: '');
     user = userValue;
     fullNameController.text = user.username;
     emailController.text = user.email;
@@ -83,7 +83,8 @@ class EditProfileState extends State<EditProfile> {
                   children: [
                     InkWell(
                       onTap: () async {
-                        FilePickerResult? result = await FilePicker.platform.pickFiles(
+                        FilePickerResult? result =
+                            await FilePicker.platform.pickFiles(
                           type: FileType.image,
                         );
 
@@ -110,7 +111,8 @@ class EditProfileState extends State<EditProfile> {
                           image: DecorationImage(
                             fit: BoxFit.cover,
                             image: selectedImage != null
-                                ? FileImage(selectedImage!) as ImageProvider<Object>
+                                ? FileImage(selectedImage!)
+                                    as ImageProvider<Object>
                                 : AssetImage('assets/user.png'),
                           ),
                         ),
@@ -169,7 +171,8 @@ class EditProfileState extends State<EditProfile> {
                     onPressed: () async {
                       String updatedName = fullNameController.text;
                       String updatedEmail = emailController.text;
-                      String updatedUsername = fullNameController.text; // Use the same text as for full name
+                      String updatedUsername = fullNameController
+                          .text; // Use the same text as for full name
                       String updatedPassword = passwordController.text;
 
                       if (!isEmailValid(updatedEmail)) {
@@ -187,7 +190,8 @@ class EditProfileState extends State<EditProfile> {
                         },
                       );*/
                       final response = await http.post(
-                        Uri.parse('http://192.168.48.222/fake-api/editprofile.php'),
+                        Uri.parse(
+                            'http://192.168.48.222/fake-api/editprofile.php'),
                         headers: <String, String>{
                           'Content-Type': 'application/json; charset=UTF-8',
                         },
@@ -200,11 +204,13 @@ class EditProfileState extends State<EditProfile> {
 
                       if (response.statusCode == 200) {
                         print('Profile updated successfully');
-                        _showMessageToUser('Profile updated successfully', Colors.green);
+                        _showMessageToUser(
+                            'Profile updated successfully', Colors.green);
                       } else {
                         print('Failed to update profile');
                         print('Response body: ${response.body}');
-                        _showMessageToUser('Failed to update profile', Colors.red);
+                        _showMessageToUser(
+                            'Failed to update profile', Colors.red);
                       }
                     },
                     child: const Text(
@@ -233,10 +239,10 @@ class EditProfileState extends State<EditProfile> {
   }
 
   Widget buildTextField(
-      String labelText,
-      TextEditingController controller,
-      bool isPasswordTextField,
-      ) {
+    String labelText,
+    TextEditingController controller,
+    bool isPasswordTextField,
+  ) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 30),
       child: TextField(
@@ -245,16 +251,16 @@ class EditProfileState extends State<EditProfile> {
         decoration: InputDecoration(
           suffixIcon: isPasswordTextField
               ? IconButton(
-            icon: Icon(
-              isObscurePassword ? Icons.visibility_off : Icons.visibility,
-              color: Colors.grey,
-            ),
-            onPressed: () {
-              setState(() {
-                isObscurePassword = !isObscurePassword;
-              });
-            },
-          )
+                  icon: Icon(
+                    isObscurePassword ? Icons.visibility_off : Icons.visibility,
+                    color: Colors.grey,
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      isObscurePassword = !isObscurePassword;
+                    });
+                  },
+                )
               : null,
           contentPadding: const EdgeInsets.only(bottom: 5),
           labelText: labelText,
@@ -284,8 +290,6 @@ class EditProfileState extends State<EditProfile> {
       fontSize: 16.0,
     );
   }
-
-
 }
 
 class MyApp extends StatelessWidget {
