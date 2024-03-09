@@ -1329,11 +1329,7 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
                                         majorGridLines: const MajorGridLines(
                                     color: Colors
                                         .transparent), // Hide minor tick lines
-                                        labelIntersectAction:
-                                    AxisLabelIntersectAction.rotate45,
-                                                                        labelStyle: const TextStyle(
-                                                                          color: Colors.black,
-                                                                          fontSize: 10,
+                                        labelIntersectAction: AxisLabelIntersectAction.rotate45, labelStyle: const TextStyle(color: Colors.black, fontSize: 10,
                                                                         ),
                                                                       ),
                                                                       tooltipBehavior: _tooltip,

@@ -410,40 +410,37 @@ class NavigationState extends State<Navigation> {
                         polylineCulling: true,
                         pointerDistanceTolerance: 20,
                         onTap: (polylines, tapPosition) => print('Tapped: ' + polylines.map((polyline) => polyline.tag).join(',') + 'at' + tapPosition.globalPosition.toString()),
-                        polylines:
-                        [
+                        polylines: polylineCoordinates.isNotEmpty
+                            ? [
                           TaggedPolyline(
                             tag: 'My Polyline',
-                            // An optional tag to distinguish polylines in callback
-                            points:
-                            polylineCoordinates, //getCoordinates()== null ? 0 : getCoordinates(),//getPoints(1)getPoints(0)
+                            points: polylineCoordinates,
                             color: Colors.red,
                             strokeWidth: 9.0,
                           ),
                         ]
-                      )
-                    ,
+                            : [] // If polylineCoordinates is empty, don't create any polylines
+                      ),
                     MarkerLayer(
-                      markers: polylineCoordinates.isNotEmpty == true
+                      markers: polylineCoordinates.isNotEmpty
                           ? [
-                              Marker(
-                                  width: 50,
-                                  height: 32,
-                                  point: polylineCoordinates[0],
-                                  child: Image.asset(
-                                      'assets/marker_walking.png'),
-                                  ),
-                              Marker(
-                                  width: 50,
-                                  height: 32,
-                                  point: polylineCoordinates.last,
-                                  child: Image.asset(
-                                    'assets/marker_standing.png',
-                                    scale: 15,
-                                  ),
-                                  )
-                            ]
-                          : [],
+                        Marker(
+                          width: 50,
+                          height: 32,
+                          point: polylineCoordinates.first,
+                          child: Image.asset('assets/marker_walking.png'),
+                        ),
+                        Marker(
+                          width: 50,
+                          height: 32,
+                          point: polylineCoordinates.last,
+                          child: Image.asset(
+                            'assets/marker_standing.png',
+                            scale: 15,
+                          ),
+                        )
+                      ]
+                          : [], // If polylineCoordinates is empty, don't create any markers
                       rotate: true,
                     ),
                   ],
