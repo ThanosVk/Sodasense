@@ -51,8 +51,8 @@ class OnBoardingPageState extends State<OnBoardingPage> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               _buildImage('main_screen.png'),
-              SizedBox(height: 12),
-              Text(
+              const SizedBox(height: 12),
+              const Text(
                 "This is the main screen which contains the step counter and the buttons to the rest of the screens.",
                 style: bodyStyle,
                 textAlign: TextAlign.center,
@@ -67,8 +67,8 @@ class OnBoardingPageState extends State<OnBoardingPage> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               _buildImage('route_screen.png'),
-              SizedBox(height: 20),
-              Text(
+              const SizedBox(height: 20),
+              const Text(
                 "This screen shows the map and the position of the user.",
                 style: bodyStyle,
                 textAlign: TextAlign.center,
@@ -83,8 +83,8 @@ class OnBoardingPageState extends State<OnBoardingPage> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               _buildImage('compass_screen.png'),
-              SizedBox(height: 12),
-              Text(
+              const SizedBox(height: 12),
+              const Text(
                 "This screen shows your current degree, the coordinates and the altitude of the user.",
                 style: bodyStyle,
                 textAlign: TextAlign.center,
@@ -99,8 +99,8 @@ class OnBoardingPageState extends State<OnBoardingPage> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               _buildImage('sensors_screen.jpg'),
-              SizedBox(height: 20),
-              Text(
+              const SizedBox(height: 20),
+              const Text(
                 "This scren shows the total steps and readings of each available sensor.",
                 style: bodyStyle,
                 textAlign: TextAlign.center,
@@ -115,8 +115,8 @@ class OnBoardingPageState extends State<OnBoardingPage> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               _buildImage('settings_screen.jpg'),
-              SizedBox(height: 20),
-              Text(
+              const SizedBox(height: 20),
+              const Text(
                 "This is the settings screen on which the user can change various settings such as the sampling rate of the sensors or save the .db file to the device.",
                 style: bodyStyle,
                 textAlign: TextAlign.center,

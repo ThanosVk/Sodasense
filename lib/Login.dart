@@ -1,4 +1,3 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:internet_connection_checker/internet_connection_checker.dart';
 import 'package:thesis/Signup.dart';
@@ -81,6 +80,7 @@ class LoginState extends State<Login> {
       mail_msg='Valid email';
       print(mail_msg);
     }
+    return null;
   }
 
   //Function for displaying the correct error message on password textfield
@@ -98,6 +98,7 @@ class LoginState extends State<Login> {
       pass_msg='Valid password';
       print(pass_msg);
     }
+    return null;
   }
 
   //Function for testing if mail textfield is changed for the first time
@@ -131,15 +132,15 @@ class LoginState extends State<Login> {
   Future<bool?> showWarning(BuildContext context) async => showDialog<bool>(
     context: context,
     builder: (context) => AlertDialog(
-      title: Text('Exit'),
-      content: Text('Are you sure you want to exit the app?'),
+      title: const Text('Exit'),
+      content: const Text('Are you sure you want to exit the app?'),
       actions: [
         ElevatedButton(onPressed: () => {
           Navigator.pop(context)
-        },child: Text('No')),
+        },child: const Text('No')),
         ElevatedButton(onPressed: () async {
           Navigator.pop(context, true);
-        }, child: Text('Yes'))
+        }, child: const Text('Yes'))
       ],
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.0)),
     ),
@@ -167,8 +168,8 @@ class LoginState extends State<Login> {
 
                   Container(
                     alignment: Alignment.centerLeft,
-                    padding: EdgeInsets.symmetric(horizontal: 40),
-                    child: Text(
+                    padding: const EdgeInsets.symmetric(horizontal: 40),
+                    child: const Text(
                       "LOGIN",
                       style: TextStyle(
                           fontWeight: FontWeight.bold,
@@ -183,7 +184,7 @@ class LoginState extends State<Login> {
 
                   Container(
                     alignment: Alignment.center,
-                    margin: EdgeInsets.symmetric(horizontal: 40),
+                    margin: const EdgeInsets.symmetric(horizontal: 40),
                     child: TextField(
                       controller: mail_txtController,
                       decoration: InputDecoration(
@@ -200,7 +201,7 @@ class LoginState extends State<Login> {
 
                   Container(
                     alignment: Alignment.center,
-                    margin: EdgeInsets.symmetric(horizontal: 40),
+                    margin: const EdgeInsets.symmetric(horizontal: 40),
                     child: TextField(
                       controller: pass_txtController,
                       decoration: InputDecoration(
@@ -258,12 +259,12 @@ class LoginState extends State<Login> {
 
                   Container(
                     alignment: Alignment.centerRight,
-                    margin: EdgeInsets.symmetric(horizontal: 40, vertical: 10),
+                    margin: const EdgeInsets.symmetric(horizontal: 40, vertical: 10),
                     child: GestureDetector(
                       onTap: () => {
-                        Navigator.push(context, MaterialPageRoute(builder: (context) => PassReset()))
+                        Navigator.push(context, MaterialPageRoute(builder: (context) => const PassReset()))
                       },
-                      child: Text(
+                      child: const Text(
                         "Forgot your password?",
                         style: TextStyle(
                             fontSize: 12,
@@ -278,7 +279,7 @@ class LoginState extends State<Login> {
 
                   Container(
                     alignment: Alignment.centerRight,
-                    margin: EdgeInsets.symmetric(horizontal: 40, vertical: 10),
+                    margin: const EdgeInsets.symmetric(horizontal: 40, vertical: 10),
                     child: ElevatedButton(
                       onPressed: () async {
                         connectivityresult = await Connectivity().checkConnectivity();
@@ -341,13 +342,13 @@ class LoginState extends State<Login> {
                               // access_token = access_token.replaceAll('{"access_token":"', '');
                               //Base64 requires string multiple of 4 in order to have 0 remainder with mod division
                               if(token_parts[1].length % 4 == 1){
-                                token_parts[1] = token_parts[1] + '===';
+                                token_parts[1] = '${token_parts[1]}===';
                               }
                               else if(token_parts[1].length % 4 == 2){
-                                token_parts[1] = token_parts[1] + '==';
+                                token_parts[1] = '${token_parts[1]}==';
                               }
                               else if(token_parts[1].length % 4 == 3){
-                                token_parts[1] = token_parts[1] + '=';
+                                token_parts[1] = '${token_parts[1]}=';
                               }
                               var jsontext = base64.decode(token_parts[1]);
                               Map<String,dynamic> decoded_token= jsonDecode(utf8.decode(jsontext));
@@ -434,7 +435,7 @@ class LoginState extends State<Login> {
                         height: 50.0,
                         width: size.width * 0.5,
                         padding: const EdgeInsets.all(0),
-                        child: Text(
+                        child: const Text(
                           "LOGIN",
                           textAlign: TextAlign.center,
                           style: TextStyle(
@@ -447,12 +448,12 @@ class LoginState extends State<Login> {
 
                   Container(
                     alignment: Alignment.centerRight,
-                    margin: EdgeInsets.symmetric(horizontal: 40, vertical: 10),
+                    margin: const EdgeInsets.symmetric(horizontal: 40, vertical: 10),
                     child: GestureDetector(
                       onTap: () => {
-                        Navigator.push(context, MaterialPageRoute(builder: (context) => Signup()))
+                        Navigator.push(context, MaterialPageRoute(builder: (context) => const Signup()))
                       },
-                      child: Text(
+                      child: const Text(
                         "Don't Have an Account? Sign up",
                         style: TextStyle(
                             fontSize: 12,

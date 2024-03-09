@@ -23,9 +23,9 @@ import 'package:thesis/Theme_provider.dart';
 class CachedTileProvider extends TileProvider {
   CachedTileProvider({customCacheManager});
   @override
-  ImageProvider getImage(TileCoordinates coords, TileLayer options) {
+  ImageProvider getImage(TileCoordinates coordinates, TileLayer options) {
     return CachedNetworkImageProvider(
-      getTileUrl(coords, options),
+      getTileUrl(coordinates, options),
       //Now you can set options that determine how the image gets cached via whichever plugin you use.
     );
   }
@@ -52,7 +52,7 @@ class NavigationState extends State<Navigation> {
 
   geo.Position? currentPosition;
 
-  FollowOnLocationUpdate follow_on_location_update = FollowOnLocationUpdate.never;
+  AlignOnUpdate follow_on_location_update = AlignOnUpdate.never;
   StreamController<double> follow_current_location_StreamController = StreamController<double>();
 
   Completer<MapController> controllerMap = Completer();
@@ -65,7 +65,7 @@ class NavigationState extends State<Navigation> {
   loc.LocationData? currentLocation;
   loc.LocationData? destinationLocation;
 
-  loc.Location location = new loc.Location();
+  loc.Location location = loc.Location();
 
   //Date for using date in the database
   int date = 0;
@@ -81,7 +81,6 @@ class NavigationState extends State<Navigation> {
 
   var box = Hive.box('user');
 
-  DateTimeRange? _dateRange;
 
   String date_end = '';
   int sl_date = 0, prsd_btn_first = 0, prsd_btn_second = 0;
@@ -95,7 +94,7 @@ class NavigationState extends State<Navigation> {
 
   static final customCacheManager = CacheManager(
     Config('customCacheKey',
-        stalePeriod: Duration(days: 30), maxNrOfCacheObjects: 200),
+        stalePeriod: const Duration(days: 30), maxNrOfCacheObjects: 200),
   );
 
   @override
@@ -120,7 +119,7 @@ class NavigationState extends State<Navigation> {
     // location.changeSettings(accuracy: loc.LocationAccuracy.navigation);
     if (mounted) {
       setState(() {
-        follow_on_location_update = FollowOnLocationUpdate.always;
+        follow_on_location_update = AlignOnUpdate.always;
         follow_current_location_StreamController = StreamController<double>();
 
         location.onLocationChanged.listen((loc.LocationData cLoc) {
@@ -338,9 +337,9 @@ class NavigationState extends State<Navigation> {
     return Scaffold(
         drawer: Sidemenu(),
         appBar: AppBar(
-            title: Text("Route"),
+            title: const Text("Route"),
             systemOverlayStyle:
-                SystemUiOverlayStyle(statusBarColor: Colors.cyan)),
+                const SystemUiOverlayStyle(statusBarColor: Colors.cyan)),
         body: SafeArea(child: Builder(builder: (context) {
           if (hasPermissions) {
             // location.changeSettings(accuracy: loc.LocationAccuracy.navigation);
@@ -373,7 +372,7 @@ class NavigationState extends State<Navigation> {
                         if (hasGesture) {
                           setState(() {
                             follow_on_location_update =
-                                FollowOnLocationUpdate.never;
+                                AlignOnUpdate.never;
                           });
                         }
                       }),
@@ -382,7 +381,7 @@ class NavigationState extends State<Navigation> {
                       //options: TileLayerOptions(
                           urlTemplate:
                               "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-                          subdomains: ['a', 'b', 'c'],
+                          subdomains: const ['a', 'b', 'c'],
                           maxZoom: 19,
                           tileProvider: CachedTileProvider(
                             customCacheManager: customCacheManager,
@@ -390,7 +389,7 @@ class NavigationState extends State<Navigation> {
                     ),
                     CurrentLocationLayer(
                       style: LocationMarkerStyle(
-                        marker: DefaultLocationMarker(
+                        marker: const DefaultLocationMarker(
                           color: Color(0xFF2ef77a),
                           child: Icon(
                             Icons.person,
@@ -403,14 +402,14 @@ class NavigationState extends State<Navigation> {
                         headingSectorRadius: 120,
                         // markerAnimationDuration: Duration(milliseconds: Duration.millisecondsPerSecond),
                       ),
-                      followCurrentLocationStream:follow_current_location_StreamController.stream,
-                      followOnLocationUpdate: follow_on_location_update,
+                      alignPositionStream:follow_current_location_StreamController.stream,
+                      alignPositionOnUpdate: follow_on_location_update,
                     )
                     ,
                     TappablePolylineLayer(
                         polylineCulling: true,
                         pointerDistanceTolerance: 20,
-                        onTap: (polylines, tapPosition) => print('Tapped: ' + polylines.map((polyline) => polyline.tag).join(',') + 'at' + tapPosition.globalPosition.toString()),
+                        onTap: (polylines, tapPosition) => print('Tapped: ${polylines.map((polyline) => polyline.tag).join(',')}at${tapPosition.globalPosition}'),
                         polylines:
                         [
                           TaggedPolyline(
@@ -455,7 +454,7 @@ class NavigationState extends State<Navigation> {
                   child: InkWell(
                     onLongPress: () {
                       // print('MEGALLOOOOOO');
-                      Clipboard.setData(ClipboardData(text: "${lat},${lng}"));
+                      Clipboard.setData(ClipboardData(text: "$lat,$lng"));
                       Fluttertoast.showToast(
                           msg:
                               'The coordinates are: X:$lat, Y:$lng and copied to clipboard',
@@ -466,12 +465,12 @@ class NavigationState extends State<Navigation> {
                       onPressed: () {
                         setState(() {
                           follow_on_location_update =
-                              FollowOnLocationUpdate.always;
+                              AlignOnUpdate.always;
                         });
                         follow_current_location_StreamController.add(18);
                         // print('mikroooo');
                       },
-                      child: Icon(
+                      child: const Icon(
                         Icons.my_location,
                         color: Colors.white,
                       ),
@@ -492,7 +491,7 @@ class NavigationState extends State<Navigation> {
                           builder: (context) => StatefulBuilder(builder:
                               (BuildContext context, StateSetter setState) {
                             return AlertDialog(
-                              title: Text(
+                              title: const Text(
                                   'Set the number of coordinate points and the date you want to display on map.',
                                   textAlign: TextAlign.justify),
                               content: SizedBox(
@@ -500,11 +499,11 @@ class NavigationState extends State<Navigation> {
                                   child: Column(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      Text(
+                                      const Text(
                                           'Set the number of coordinate points'),
                                       Row(
                                         children: [
-                                          Text('10'),
+                                          const Text('10'),
                                           Expanded(
                                             child: Slider.adaptive(
                                               value: coor_points,
@@ -515,28 +514,22 @@ class NavigationState extends State<Navigation> {
                                                   .round()
                                                   .toString(),
                                               onChanged: (coor_points) =>
-                                                  setState(() => {
-                                                        this.coor_points =
-                                                            coor_points,
-                                                        // if(coor_points > 2000){
-                                                        //   Fluttertoast.showToast(msg: 'Select more than 2000 points only if you have high-end device', toastLength: Toast.LENGTH_LONG,gravity: ToastGravity.BOTTOM)
-                                                        // },
-                                                        // print(coor_points)
-                                                      }),
+                                                  setState(() => this.coor_points =
+                                                            coor_points,),
                                             ),
                                           ),
-                                          Text('5000')
+                                          const Text('5000')
                                         ],
                                       ),
-                                      SizedBox(height: 16),
-                                      Text('and the start date to show on map'),
+                                      const SizedBox(height: 16),
+                                      const Text('and the start date to show on map'),
                                       ElevatedButton(
                                           onPressed: () {
                                             pickDate(context);
                                             prsd_btn_first = 1;
                                           },
                                           child: selected_date == null
-                                              ? Text('Select Date')
+                                              ? const Text('Select Date')
                                               : Text(
                                                   '${selected_date?.day}/${selected_date?.month}/${selected_date?.year}')),
                                       // Row(
@@ -558,7 +551,7 @@ class NavigationState extends State<Navigation> {
                                       //     ),
                                       //   ],
                                       // ),
-                                      Text(
+                                      const Text(
                                           'Or press the button below to select a specific day'),
                                       ElevatedButton(
                                         onPressed: () {
@@ -567,7 +560,7 @@ class NavigationState extends State<Navigation> {
                                           prsd_btn_second = 1;
                                         },
                                         child: selected_date_second == null
-                                            ? Text('Select Date')
+                                            ? const Text('Select Date')
                                             : Text(
                                                 '${selected_date_second?.day}/${selected_date_second?.month}/${selected_date_second?.year}'),
                                       )
@@ -582,7 +575,7 @@ class NavigationState extends State<Navigation> {
                                       polylineCoordinates = [];
                                       Navigator.pop(context);
                                     },
-                                    child: Text('Cancel')),
+                                    child: const Text('Cancel')),
                                 ElevatedButton(
                                     onPressed: () async {
                                       if ((selected_date == '' ||
@@ -660,7 +653,7 @@ class NavigationState extends State<Navigation> {
                                         Navigator.pop(context, coor_points);
                                       }
                                     },
-                                    child: Text('Ok')),
+                                    child: const Text('Ok')),
                               ],
                               shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(10.0)),
@@ -669,7 +662,7 @@ class NavigationState extends State<Navigation> {
                           barrierDismissible: false,
                         );
                       },
-                      child: Icon(
+                      child: const Icon(
                         FontAwesomeIcons.route,
                         color: Colors.white,
                       ),
@@ -717,14 +710,14 @@ class NavigationState extends State<Navigation> {
                   minHeight: size.height * 0.06,
                   maxHeight: size.height * 0.5,
                   borderRadius:
-                      BorderRadius.vertical(top: Radius.circular(18.0)),
+                      const BorderRadius.vertical(top: Radius.circular(18.0)),
                   parallaxEnabled: true,
                   parallaxOffset: 0.5,
                   color: themeProvider.isDarkMode == true
                       ? Colors.grey.shade900
                       : Colors.white,
                   panel: Container(
-                    padding: EdgeInsets.symmetric(horizontal: 24),
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -751,23 +744,23 @@ class NavigationState extends State<Navigation> {
                                   mainAxisAlignment:
                                       MainAxisAlignment.spaceEvenly,
                                   children: [
-                                    Text('Distance traveled in Km',
+                                    const Text('Distance traveled in Km',
                                         style: TextStyle(
                                             fontSize: 16.0,
                                             fontWeight: FontWeight.bold)),
-                                    Text('${distance.toStringAsFixed(2)}',
-                                        style: TextStyle(fontSize: 16.0))
+                                    Text(distance.toStringAsFixed(2),
+                                        style: const TextStyle(fontSize: 16.0))
                                   ]),
                               Column(
                                   mainAxisAlignment:
                                       MainAxisAlignment.spaceEvenly,
                                   children: [
-                                    Text('Moving speed in Km/h',
+                                    const Text('Moving speed in Km/h',
                                         style: TextStyle(
                                             fontSize: 16.0,
                                             fontWeight: FontWeight.bold)),
-                                    Text('${speed.toStringAsFixed(1)}',
-                                        style: TextStyle(fontSize: 16.0))
+                                    Text(speed.toStringAsFixed(1),
+                                        style: const TextStyle(fontSize: 16.0))
                                   ])
                             ]),
                       ],
@@ -788,18 +781,18 @@ class NavigationState extends State<Navigation> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
-          Text('Location Permission Required'),
+          const Text('Location Permission Required'),
           ElevatedButton(
-            child: Text('Request Permissions'),
+            child: const Text('Request Permissions'),
             onPressed: () {
               Permission.locationWhenInUse.request().then((ignored) {
                 fetchPermissionStatus();
               });
             },
           ),
-          SizedBox(height: 16),
+          const SizedBox(height: 16),
           ElevatedButton(
-            child: Text('Open App Settings'),
+            child: const Text('Open App Settings'),
             onPressed: () {
               openAppSettings().then((opened) {});
             },

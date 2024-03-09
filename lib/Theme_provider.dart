@@ -22,22 +22,22 @@ class ThemeProvider extends ChangeNotifier {
 class MyThemes {
   static final darkTheme = ThemeData(
       scaffoldBackgroundColor: Colors.grey.shade900,
-      colorScheme: ColorScheme.dark(primary: Colors.cyan),
-      appBarTheme: AppBarTheme(
+      colorScheme: const ColorScheme.dark(primary: Colors.cyan),
+      appBarTheme: const AppBarTheme(
           backgroundColor: Colors.cyan,
           iconTheme: IconThemeData(color: Colors.black),
           foregroundColor: Colors.black),
       cardTheme: CardTheme(color: Colors.grey.shade900),
-      listTileTheme: ListTileThemeData(iconColor: Colors.white));
+      listTileTheme: const ListTileThemeData(iconColor: Colors.white));
 
   static final lightTheme = ThemeData(
       primarySwatch: Colors.cyan,
       scaffoldBackgroundColor: Colors.white,
-      appBarTheme: AppBarTheme(
+      appBarTheme: const AppBarTheme(
           backgroundColor: Colors.cyan,
           iconTheme: IconThemeData(color: Colors.black),
           foregroundColor: Colors.black),
       primaryColor: Colors.cyan,
       // iconTheme: IconThemeData(color: Colors.black),
-      listTileTheme: ListTileThemeData(iconColor: Colors.black));
+      listTileTheme: const ListTileThemeData(iconColor: Colors.black));
 }

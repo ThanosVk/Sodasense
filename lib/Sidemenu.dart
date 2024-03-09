@@ -9,6 +9,8 @@ import 'package:hive/hive.dart';
 import 'dart:io';
 
 class Sidemenu extends StatelessWidget {
+  const Sidemenu({Key? key}) : super(key: key);
+
   @override
   Widget build(BuildContext context) {
     var box = Hive.box('user');
@@ -18,16 +20,15 @@ class Sidemenu extends StatelessWidget {
         padding: EdgeInsets.zero,
         children: [
           UserAccountsDrawerHeader(
-            accountName: Text('', style: TextStyle(color: Colors.white)),
+            accountName: const Text('', style: TextStyle(color: Colors.white)),
             accountEmail: Text('${box.get('email')}',
-                style: TextStyle(color: Colors.white)),
+                style: const TextStyle(color: Colors.white)),
             currentAccountPicture: CircleAvatar(
               child: ClipOval(
                 child: box.get('imagePath') != null
                     ? Image(
                         image: FileImage(
-                                File(box.get('imagePath', defaultValue: null)))
-                            as ImageProvider<Object>,
+                                File(box.get('imagePath', defaultValue: null))),
                         width: 65,
                         height: 65,
                         fit: BoxFit.cover,
@@ -36,59 +37,59 @@ class Sidemenu extends StatelessWidget {
                         width: 65, height: 65, fit: BoxFit.cover),
               ),
             ),
-            decoration: BoxDecoration(
+            decoration: const BoxDecoration(
               color: Colors.cyan,
               image: DecorationImage(
                   fit: BoxFit.fill, image: AssetImage('assets/background.png')),
             ),
           ),
           ListTile(
-            leading: Icon(Icons.home_outlined),
-            title: Text('Main screen'),
+            leading: const Icon(Icons.home_outlined),
+            title: const Text('Main screen'),
             onTap: () => Navigator.push(
-                context, MaterialPageRoute(builder: (context) => MyHomePage())),
+                context, MaterialPageRoute(builder: (context) => const MyHomePage())),
           ),
           ListTile(
-            leading: Icon(Icons.location_on_outlined),
-            title: Text('Route'),
+            leading: const Icon(Icons.location_on_outlined),
+            title: const Text('Route'),
             onTap: () => Navigator.push(
-                context, MaterialPageRoute(builder: (context) => Navigation())),
+                context, MaterialPageRoute(builder: (context) => const Navigation())),
           ),
           ListTile(
-            leading: Icon(Icons.explore_outlined),
-            title: Text('Compass'),
+            leading: const Icon(Icons.explore_outlined),
+            title: const Text('Compass'),
             onTap: () => Navigator.push(
-                context, MaterialPageRoute(builder: (context) => Compass())),
+                context, MaterialPageRoute(builder: (context) => const Compass())),
           ),
           ListTile(
-            leading: Icon(
+            leading: const Icon(
               Icons.sensors_outlined,
             ),
-            title: Text('Sensors'),
+            title: const Text('Sensors'),
             onTap: () => Navigator.push(
-                context, MaterialPageRoute(builder: (context) => Sensors())),
+                context, MaterialPageRoute(builder: (context) => const Sensors())),
           ),
           ListTile(
-            leading: Icon(
+            leading: const Icon(
               Icons.settings,
             ),
-            title: Text('Settings'),
+            title: const Text('Settings'),
             onTap: () => Navigator.push(
-                context, MaterialPageRoute(builder: (context) => Settings())),
+                context, MaterialPageRoute(builder: (context) => const Settings())),
           ),
           ListTile(
-            leading: Icon(Icons.logout),
-            title: Text('Logout'),
+            leading: const Icon(Icons.logout),
+            title: const Text('Logout'),
             onTap: () => {
               showDialog(
                 context: context,
                 builder: (context) => AlertDialog(
-                  title: Text('Logout'),
-                  content: Text('Are you sure you want to exit?'),
+                  title: const Text('Logout'),
+                  content: const Text('Are you sure you want to exit?'),
                   actions: [
                     ElevatedButton(
                         onPressed: () => {Navigator.pop(context)},
-                        child: Text('No')),
+                        child: const Text('No')),
                     ElevatedButton(
                         onPressed: () async {
                           await StartScreen().stopForegroundTask();
@@ -99,9 +100,9 @@ class Sidemenu extends StatelessWidget {
                           box.delete('access_token');
                           box.delete('userid');
                           Navigator.push(context,
-                              MaterialPageRoute(builder: (context) => Login()));
+                              MaterialPageRoute(builder: (context) => const Login()));
                         },
-                        child: Text('Yes'))
+                        child: const Text('Yes'))
                   ],
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10.0)),

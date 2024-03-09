@@ -7,7 +7,6 @@ import 'dart:math' as math;
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:thesis/SqlDatabase.dart';
-import 'package:thesis/Navigation.dart';
 import 'dart:async';
 
 class Compass extends StatefulWidget {
@@ -90,7 +89,6 @@ class _CompassState extends State<Compass> {
   Future<void> GetAddressFromLatLong(Position position) async {
     List<Placemark> placemarks =
         await placemarkFromCoordinates(position.latitude, position.longitude);
-    double alt_placemarks = await position.altitude;
     print(placemarks);
     Placemark place = placemarks[0];
     setState(() {
@@ -107,7 +105,7 @@ class _CompassState extends State<Compass> {
     //location ='Lat: ${(position.latitude).toStringAsFixed(4)} , Long: ${(position.longitude).toStringAsFixed(4)}';
     Altitude = position.altitude;
 
-    print('$location');
+    print(location);
     GetAddressFromLatLong(position);
   }
 
@@ -129,11 +127,11 @@ class _CompassState extends State<Compass> {
     return Scaffold(
       drawer: Sidemenu(),
       appBar: AppBar(
-        title: Text("Compass"),
+        title: const Text("Compass"),
         actions: <Widget>[
           IconButton(
               alignment: Alignment.center,
-              icon: Icon(Icons.location_on_outlined),
+              icon: const Icon(Icons.location_on_outlined),
               onPressed: () => {
                     getData(),
                     if (serviceEnabled == true)
@@ -180,11 +178,11 @@ class _CompassState extends State<Compass> {
                         //   color: Colors.black,
                         // ),
                         children: <TextSpan>[
-                          TextSpan(
+                          const TextSpan(
                               text: 'Adrress: ',
                               style:
-                                  const TextStyle(fontWeight: FontWeight.bold)),
-                          TextSpan(text: '$adr'),
+                                  TextStyle(fontWeight: FontWeight.bold)),
+                          TextSpan(text: adr),
                         ]),
                     textAlign: TextAlign.center,
                   ),
@@ -195,18 +193,18 @@ class _CompassState extends State<Compass> {
                         // ),
                         children: serviceEnabled == true
                             ? [
-                                TextSpan(
+                                const TextSpan(
                                     text: 'Lat: ',
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                         fontWeight: FontWeight.bold)),
                                 TextSpan(text: '${lat},'),
-                                TextSpan(
+                                const TextSpan(
                                     text: ' Lon: ',
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                         fontWeight: FontWeight.bold)),
                                 TextSpan(text: '${lng}'),
                               ]
-                            : [TextSpan(text: '$loc')]),
+                            : [TextSpan(text: loc)]),
                   ),
                   Text.rich(
                     TextSpan(
@@ -214,11 +212,11 @@ class _CompassState extends State<Compass> {
                         //   color: Colors.black,
                         // ),
                         children: <TextSpan>[
-                          TextSpan(
+                          const TextSpan(
                               text: 'Altitude: ',
                               style:
-                                  const TextStyle(fontWeight: FontWeight.bold)),
-                          TextSpan(text: '$alt'),
+                                  TextStyle(fontWeight: FontWeight.bold)),
+                          TextSpan(text: alt),
                         ]),
                   ),
                   //Build_Adrress(),
@@ -243,7 +241,7 @@ class _CompassState extends State<Compass> {
         }
 
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return Center(
+          return const Center(
             child: CircularProgressIndicator(),
           );
         }
@@ -252,19 +250,20 @@ class _CompassState extends State<Compass> {
 
         // if direction is null, then device does not support this sensor
         // show error message
-        if (direction == null)
-          return Center(
+        if (direction == null) {
+          return const Center(
             child: Text("Device does not have sensors !"),
           );
+        }
 
         return Material(
-          shape: CircleBorder(),
+          shape: const CircleBorder(),
           clipBehavior: Clip.antiAlias,
           elevation: 4.0,
           child: Container(
-            padding: EdgeInsets.all(16.0),
+            padding: const EdgeInsets.all(16.0),
             alignment: Alignment.center,
-            decoration: BoxDecoration(
+            decoration: const BoxDecoration(
               shape: BoxShape.circle,
             ),
             child: Transform.rotate(
@@ -283,18 +282,18 @@ class _CompassState extends State<Compass> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
-          Text('Location Permission Required'),
+          const Text('Location Permission Required'),
           ElevatedButton(
-            child: Text('Request Permissions'),
+            child: const Text('Request Permissions'),
             onPressed: () {
               Permission.locationWhenInUse.request().then((ignored) {
                 fetchPermissionStatus();
               });
             },
           ),
-          SizedBox(height: 16),
+          const SizedBox(height: 16),
           ElevatedButton(
-            child: Text('Open App Settings'),
+            child: const Text('Open App Settings'),
             onPressed: () {
               openAppSettings().then((opened) {});
             },

@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'package:carousel_slider/carousel_slider.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:internet_connection_checker/internet_connection_checker.dart';
@@ -20,14 +19,12 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:thesis/Theme_provider.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'dart:isolate';
-import 'package:hive/hive.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:thesis/User.dart';
 import 'package:thesis/Navigation.dart';
 import 'dart:io';
 import 'package:thesis/SqlDatabase.dart';
 import 'package:intl/intl.dart';
-import 'package:flutter_offline/flutter_offline.dart';
 import 'dart:async';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:http/http.dart' as http;
@@ -49,7 +46,7 @@ void main() async {
 
   check_session();
 
-  runApp(MyApp());
+  runApp(const MyApp());
 }
 
 // Future check_session(BuildContext? context) async {
@@ -84,12 +81,9 @@ class MyTaskHandler extends TaskHandler {
     _sendPort = sendPort;
 
     // You can use the getData function to get the stored data.
-    final customData =
-        await FlutterForegroundTask.getData<String>(key: 'customData');
     // print('customData: $customData');
   }
 
-  @override
   Future<void> onEvent(DateTime timestamp, SendPort? sendPort) async {
     // FlutterForegroundTask.updateService(
     //     notificationTitle: 'MyTaskHandler',
@@ -116,7 +110,6 @@ class MyTaskHandler extends TaskHandler {
     sendPort?.send(timestamp.toString());
   }
 
-  @override
   void onButtonPressed(String id) {
     // Called when the notification button on the Android platform is pressed.
     // print('onButtonPressed >> $id');
@@ -138,6 +131,8 @@ class MyTaskHandler extends TaskHandler {
 }
 
 class MyApp extends StatelessWidget {
+  const MyApp({Key? key}) : super(key: key);
+
   @override
   Widget build(BuildContext context) => ChangeNotifierProvider(
       create: (context) => ThemeProvider(),
@@ -158,12 +153,14 @@ class MyApp extends StatelessWidget {
             debugShowCheckedModeBanner: false,
             home: WithForegroundTask(
                 child: (saved_mail != null && saved_pass != null)
-                    ? MyHomePage()
-                    : Login()));
+                    ? const MyHomePage()
+                    : const Login()));
       });
 }
 
 class MyHomePage extends StatefulWidget {
+  const MyHomePage({Key? key}) : super(key: key);
+
   @override
   State<MyHomePage> createState() => StartScreen();
 }
@@ -183,8 +180,7 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
       dist =
           0; //steps_length for finding the exact meters per user height,dist for distance in km
   late Stream<StepCount> _stepCountStream;
-  late Stream<PedestrianStatus> _pedestrianStatusStream;
-  String _status = '', steps = '0';
+  String steps = '0';
   int numsteps = 0, sum_steps = 0;
   bool hasPermissions = false,
       height_check =
@@ -194,7 +190,7 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
     true,
     false
   ]; //isSelected for gender toggle buttons
-  User user = new User();
+  User user = User();
 
   // String date = DateFormat('dd-MM-yyyy-HH-mm-ss').format(DateTime.now());
   //Date for using date in the database
@@ -264,7 +260,7 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
 
   geo.Position? currentPosition;
   loc.LocationData? currentLocation;
-  loc.Location location = new loc.Location();
+  loc.Location location = loc.Location();
   //steps_dp for keeping temporary the steps for saving on Hive db
   int steps_db = 0;
   //Each day for the daily steps chart
@@ -322,7 +318,7 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
 
     ReceivePort? receivePort;
     if (reqResult) {
-      receivePort = await FlutterForegroundTask.receivePort;
+      receivePort = FlutterForegroundTask.receivePort;
     }
 
     return _registerReceivePort(receivePort);
@@ -360,7 +356,6 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
     _receivePort = null;
   }
 
-  T? _ambiguate<T>(T? value) => value;
 
   //For getting steps from stepController
   int stepscount() {
@@ -414,7 +409,7 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
     check_magn_availability();
 
     //accelerometer initialization event
-    userAccelerometerEvents.listen((UserAccelerometerEvent event) {
+    userAccelerometerEventStream().listen((UserAccelerometerEvent event) {
       if (acc_check == true) {
         ax = event.x;
         ay = event.y;
@@ -428,7 +423,7 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
     });
 
     //gyroscope initialization event
-    gyroscopeEvents.listen((GyroscopeEvent event) {
+    gyroscopeEventStream().listen((GyroscopeEvent event) {
       if (gyro_check == true) {
         gx = event.x;
         gy = event.y;
@@ -442,7 +437,7 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
     });
 
     //magnetometer initialization event
-    magnetometerEvents.listen((MagnetometerEvent event) {
+    magnetometerEventStream().listen((MagnetometerEvent event) {
       if (magn_check == true) {
         mx = event.x;
         my = event.y;
@@ -647,6 +642,7 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
       height_msg = 'Valid height';
       print(height_msg);
     }
+    return null;
   }
 
   //Function for testing if height textfield is changed for the first time
@@ -671,7 +667,7 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
     late ConnectivityResult result;
     try {
       result = await connectivity.checkConnectivity();
-    } on PlatformException catch (e) {
+    } on PlatformException {
       //developer.log('Couldn\'t check connectivity status', error: e);
       return;
     }
@@ -1034,35 +1030,35 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
   //function for inserting to the database the pressure data
   void insert_pressure_toDb() async {
     date = DateTime.now().millisecondsSinceEpoch;
-    await SqlDatabase.instance.insert_pressure(date, pressure!, 0);
+    await SqlDatabase.instance.insert_pressure(date, pressure, 0);
     //print('KOMPLE TO PRESS');
   }
 
   //function for inserting to the database the acceleration data
   void insert_acc_toDb() async {
     date = DateTime.now().millisecondsSinceEpoch;
-    await SqlDatabase.instance.insert_acc(date, ax!, ay!, az!, 0);
+    await SqlDatabase.instance.insert_acc(date, ax, ay, az, 0);
     //print('KOMPLE TO ACC');
   }
 
   //function for inserting to the database the gyroscope data
   void insert_gyro_toDb() async {
     date = DateTime.now().millisecondsSinceEpoch;
-    await SqlDatabase.instance.insert_gyro(date, gx!, gy!, gz!, 0);
+    await SqlDatabase.instance.insert_gyro(date, gx, gy, gz, 0);
     //print('KOMPLE TO GYRO');
   }
 
   //function for inserting to the database the magnetometer data
   void insert_magn_toDb() async {
     date = DateTime.now().millisecondsSinceEpoch;
-    await SqlDatabase.instance.insert_magn(date, mx!, my!, mz!, 0);
+    await SqlDatabase.instance.insert_magn(date, mx, my, mz, 0);
     //print('KOMPLE TO MAGN');
   }
 
   //function for inserting to the database the proximity data
   void insert_prox_toDb() async {
     date = DateTime.now().millisecondsSinceEpoch;
-    await SqlDatabase.instance.insert_prox(date, "$nmsg", 0);
+    await SqlDatabase.instance.insert_prox(date, nmsg, 0);
     //print('KOMPLE TO PROX');
   }
 
@@ -1078,7 +1074,7 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
     // print('Ta vimata einai $steps');
     date = DateTime.now().millisecondsSinceEpoch;
     await SqlDatabase.instance.insert_sensors(
-        date, pressure, ax, ay, az, gx, gy, gz, mx, my, mz, "$nmsg", steps, 0);
+        date, pressure, ax, ay, az, gx, gy, gz, mx, my, mz, nmsg, steps, 0);
     //print('KOMPLE TO PROX');
   }
 
@@ -1128,14 +1124,13 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
   //totalStepsPerDay to retrieve the maximum steps per day
   getStepsByDay() async {
     List<Map> sensors = await SqlDatabase.instance.select_total_steps_per_day();
-    var arr = Map<String, int>();
+    var arr = <String, int>{};
     String tmp = '';
 
     for (int i = 0; i < sensors.length; i++) {
       tmp = DateFormat.yMMMMEEEEd()
               .add_Hms()
-              .format(DateTime.fromMillisecondsSinceEpoch(sensors[i]['date']))
-          as String;
+              .format(DateTime.fromMillisecondsSinceEpoch(sensors[i]['date']));
       arr[tmp] = sensors[i]['steps'];
     }
 
@@ -1165,8 +1160,7 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
     DateTime currentDate = DateTime.now();
     DateTime startOfWeek =
         currentDate.subtract(Duration(days: currentDate.weekday - 1));
-    DateTime endOfWeek =
-        startOfWeek.add(Duration(days: 7)); // changed from 6 to 7
+// changed from 6 to 7
 
     List<ChartData> generatedData = [];
 
@@ -1217,12 +1211,12 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
         showDialog(
           context: context,
           builder: (context) => AlertDialog(
-            title: Text('Logout'),
-            content: Text('Are you sure you want to exit?'),
+            title: const Text('Logout'),
+            content: const Text('Are you sure you want to exit?'),
             actions: [
               ElevatedButton(
                   onPressed: () => {popup = false, Navigator.pop(context)},
-                  child: Text('No')),
+                  child: const Text('No')),
               ElevatedButton(
                   onPressed: () async {
                     await StartScreen().stopForegroundTask();
@@ -1232,9 +1226,9 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
                     box.delete('pass');
                     popup = true;
                     Navigator.push(context,
-                        MaterialPageRoute(builder: (context) => Login()));
+                        MaterialPageRoute(builder: (context) => const Login()));
                   },
-                  child: Text('Yes'))
+                  child: const Text('Yes'))
             ],
             shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(10.0)),
@@ -1245,7 +1239,7 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
         return popup;
       },
       child: Scaffold(
-        drawer: Sidemenu(),
+        drawer: const Sidemenu(),
         appBar: AppBar(title: const Text("Main screen")),
         body: SafeArea(
           child: SingleChildScrollView(
@@ -1268,7 +1262,7 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
                         shadowColor: Colors.grey,
                         elevation: 10,
                         clipBehavior: Clip.antiAlias,
-                        margin: EdgeInsets.only(left: 10, right: 10),
+                        margin: const EdgeInsets.only(left: 10, right: 10),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(40),
                         ),
@@ -1287,67 +1281,64 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
                             disableCenter: true,
                           ),
                           items: [
-                            Container(
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                mainAxisSize: MainAxisSize.max,
-                                children: <Widget>[
-                                  Center(
-                                      child: Container(
-                                          child: SfCartesianChart(
-                                    primaryXAxis: CategoryAxis(
-                                      majorGridLines: MajorGridLines(
-                                          color: Colors.transparent),
-                                      labelIntersectAction:
-                                          AxisLabelIntersectAction.rotate45,
-                                      labelStyle: TextStyle(
-                                        color: Colors.black,
-                                        fontSize: 14,
-                                      ),
-                                    ),
-                                    primaryYAxis: NumericAxis(
-                                      minimum: 0,
-                                      maximum:
-                                          box.get('target_steps').toDouble() +
-                                              100,
-                                      interval:
-                                          box.get('target_steps').toDouble() /
-                                              10,
-                                      majorGridLines: MajorGridLines(
-                                          color: Colors
-                                              .transparent), // Hide minor tick lines
-                                      labelIntersectAction:
-                                          AxisLabelIntersectAction.rotate45,
-                                      labelStyle: TextStyle(
-                                        color: Colors.black,
-                                        fontSize: 10,
-                                      ),
-                                    ),
-                                    tooltipBehavior: _tooltip,
-                                    series: <ColumnSeries<ChartData, String>>[ // Change ChartSeries to ColumnSeries
-                                      ColumnSeries<ChartData, String>(
-                                        dataSource: data,
-                                        xValueMapper: (ChartData data, _) => data.x,
-                                        yValueMapper: (ChartData data, _) => data.y,
-                                        name: 'Steps',
-                                        color: Colors.cyan,
-                                      ),
-                                    ],
-                                  )))
-                                ],
-                              ),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              mainAxisSize: MainAxisSize.max,
+                              children: <Widget>[
+                                Center(
+                                    child: SfCartesianChart(
+                                                                      primaryXAxis: const CategoryAxis(
+                                                                        majorGridLines: MajorGridLines(
+                                    color: Colors.transparent),
+                                                                        labelIntersectAction:
+                                    AxisLabelIntersectAction.rotate45,
+                                                                        labelStyle: TextStyle(
+                                                                          color: Colors.black,
+                                                                          fontSize: 14,
+                                                                        ),
+                                                                      ),
+                                                                      primaryYAxis: NumericAxis(
+                                                                        minimum: 0,
+                                                                        maximum:
+                                    box.get('target_steps').toDouble() +
+                                        100,
+                                                                        interval:
+                                    box.get('target_steps').toDouble() /
+                                        10,
+                                                                        majorGridLines: const MajorGridLines(
+                                    color: Colors
+                                        .transparent), // Hide minor tick lines
+                                                                        labelIntersectAction:
+                                    AxisLabelIntersectAction.rotate45,
+                                                                        labelStyle: const TextStyle(
+                                                                          color: Colors.black,
+                                                                          fontSize: 10,
+                                                                        ),
+                                                                      ),
+                                                                      tooltipBehavior: _tooltip,
+                                                                      series: <ColumnSeries<ChartData, String>>[ // Change ChartSeries to ColumnSeries
+                                                                        ColumnSeries<ChartData, String>(
+                                                                          dataSource: data,
+                                                                          xValueMapper: (ChartData data, _) => data.x,
+                                                                          yValueMapper: (ChartData data, _) => data.y,
+                                                                          name: 'Steps',
+                                                                          color: Colors.cyan,
+                                                                        ),
+                                                                      ],
+                                                                    ))
+                              ],
                             ),
                             Container(
                               width: double.maxFinite,
-                              margin: EdgeInsets.symmetric(horizontal: 20),
-                              decoration: BoxDecoration(
+                              margin: const EdgeInsets.symmetric(horizontal: 20),
+                              decoration: const BoxDecoration(
                                 gradient: LinearGradient(
                                   colors: [Colors.white, Colors.white],
                                   begin: Alignment.topCenter,
                                   end: Alignment.bottomCenter,
                                 ),
                               ),
-                              padding: EdgeInsets.all(16),
+                              padding: const EdgeInsets.all(16),
                               child: Column(
                                 children: [
                                   Row(
@@ -1358,7 +1349,7 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
                                       Column(
                                         children: [
                                           RichText(
-                                            text: TextSpan(children: [
+                                            text: const TextSpan(children: [
                                               TextSpan(
                                                   text: 'Today',
                                                   style: TextStyle(
@@ -1382,7 +1373,7 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
                                                             StateSetter
                                                                 setState) {
                                                   return AlertDialog(
-                                                    title: Text(
+                                                    title: const Text(
                                                         'Set your daily target\nor change your height',
                                                         textAlign:
                                                             TextAlign.justify),
@@ -1499,7 +1490,7 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
                                                                         steps_target),
                                                                   }
                                                               },
-                                                          child: Text('Ok')),
+                                                          child: const Text('Ok')),
                                                     ],
                                                     shape:
                                                         RoundedRectangleBorder(
@@ -1511,7 +1502,7 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
                                                 }),
                                               )
                                             },
-                                            icon: FaIcon(
+                                            icon: const FaIcon(
                                                 FontAwesomeIcons.bullseye),
                                             color: isDarkMode == true
                                                 ? Colors.black
@@ -1526,7 +1517,7 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: <Widget>[
                                       Center(
-                                        child: Container(
+                                        child: SizedBox(
                                             height: 160,
                                             width: 160,
                                             child: Stack(
@@ -1542,7 +1533,7 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
                                                                 'target_steps')
                                                         : 0,
                                                     backgroundColor:
-                                                        Color(0xfff8f9f9),
+                                                        const Color(0xfff8f9f9),
                                                     direction: Axis.vertical),
                                                 Center(
                                                   child: RichText(
@@ -1552,8 +1543,8 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
                                                                   box.get('today_steps') !=
                                                                       null
                                                               ? '${box.get('today_steps')}/${box.get('target_steps')}'
-                                                              : '${steps}/${box.get('target_steps')}',
-                                                          style: TextStyle(
+                                                              : '$steps/${box.get('target_steps')}',
+                                                          style: const TextStyle(
                                                             color: Colors.black,
                                                             fontWeight:
                                                                 FontWeight.bold,
@@ -1586,13 +1577,13 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
                                     children: [
                                       Text(
                                         '$dist',
-                                        style: TextStyle(
+                                        style: const TextStyle(
                                             fontWeight: FontWeight.bold,
                                             fontSize: 14),
                                       ),
                                     ],
                                   ),
-                                  Row(
+                                  const Row(
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
                                       Text('Km by steps',
@@ -1639,9 +1630,9 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
                               Navigator.push(
                                   context,
                                   MaterialPageRoute(
-                                      builder: (context) => Navigation()))
+                                      builder: (context) => const Navigation()))
                             },
-                            child: Row(
+                            child: const Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Text('Route'),
@@ -1672,9 +1663,9 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
                                   Navigator.push(
                                       context,
                                       MaterialPageRoute(
-                                          builder: (context) => Compass()))
+                                          builder: (context) => const Compass()))
                                 },
-                            child: Row(
+                            child: const Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Text('Compass'),
@@ -1710,9 +1701,9 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
                                         context,
                                         MaterialPageRoute(
                                             builder: (context) =>
-                                                sens.Sensors()))
+                                                const sens.Sensors()))
                                   },
-                              child: Row(
+                              child: const Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   Text('Sensors'),
@@ -1738,9 +1729,9 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
                                   Navigator.push(
                                       context,
                                       MaterialPageRoute(
-                                          builder: (context) => Settings()))
+                                          builder: (context) => const Settings()))
                                 },
-                            child: Row(
+                            child: const Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Text('Settings'),
@@ -1775,14 +1766,14 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
                               showDialog(
                                 context: context,
                                 builder: (context) => AlertDialog(
-                                  title: Text('Logout'),
+                                  title: const Text('Logout'),
                                   content:
-                                      Text('Are you sure you want to exit?'),
+                                      const Text('Are you sure you want to exit?'),
                                   actions: [
                                     ElevatedButton(
                                         onPressed: () =>
                                             {Navigator.pop(context)},
-                                        child: Text('No')),
+                                        child: const Text('No')),
                                     ElevatedButton(
                                         onPressed: () async {
                                           await StartScreen()
@@ -1797,9 +1788,9 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
                                               context,
                                               MaterialPageRoute(
                                                   builder: (context) =>
-                                                      Login()));
+                                                      const Login()));
                                         },
-                                        child: Text('Yes'))
+                                        child: const Text('Yes'))
                                   ],
                                   shape: RoundedRectangleBorder(
                                       borderRadius:
@@ -1808,7 +1799,7 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
                                 barrierDismissible: false,
                               ),
                             },
-                            child: Row(
+                            child: const Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Text('Logout'),
@@ -1839,9 +1830,9 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
-          Text('Activity Permission Required'),
+          const Text('Activity Permission Required'),
           ElevatedButton(
-            child: Text('Request Permissions'),
+            child: const Text('Request Permissions'),
             onPressed: () {
               if (Platform.isAndroid) {
                 Permission.activityRecognition.request().then((ignored) {
@@ -1857,7 +1848,7 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
                 builder: (context) => StatefulBuilder(
                     builder: (BuildContext context, StateSetter setState) {
                   return AlertDialog(
-                    title: Text(
+                    title: const Text(
                         'Set your daily steps target, your gender and your height',
                         textAlign: TextAlign.justify),
                     content: SizedBox(
@@ -1865,7 +1856,7 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Text(
+                            const Text(
                               'You can change the daily target of steps anytime or the height by pressing the settings icon on top right corner.',
                               style: TextStyle(fontSize: 14),
                               textAlign: TextAlign.justify,
@@ -1873,7 +1864,7 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
                             TextField(
                               maxLength: 5,
                               controller: stepController,
-                              decoration: InputDecoration(
+                              decoration: const InputDecoration(
                                   labelText: "Steps Target", counterText: ''),
                               keyboardType: TextInputType.number,
                             ),
@@ -1891,12 +1882,12 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
                                 height_validate = height_error_msg();
                               }),
                             ),
-                            SizedBox(height: 16),
+                            const SizedBox(height: 16),
                             ToggleButtons(
                               isSelected: isSelected,
                               borderRadius: BorderRadius.circular(30),
                               color: Colors.black,
-                              children: <Widget>[Text('Male'), Text('Female')],
+                              children: const <Widget>[Text('Male'), Text('Female')],
                               onPressed: (int index) {
                                 setState(() {
                                   //final box = Boxes.getUser();
@@ -1961,7 +1952,7 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
                                     Navigator.pop(context, steps_target),
                                   }
                               },
-                          child: Text('Ok')),
+                          child: const Text('Ok')),
                     ],
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10.0)),
@@ -1971,9 +1962,9 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
               );
             },
           ),
-          SizedBox(height: 16),
+          const SizedBox(height: 16),
           ElevatedButton(
-            child: Text('Open App Settings'),
+            child: const Text('Open App Settings'),
             onPressed: () {
               openAppSettings().then((opened) {});
             },
@@ -1991,9 +1982,9 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
           SizedBox(height: size.height * 0.03),
-          Text('Location Permission Required'),
+          const Text('Location Permission Required'),
           ElevatedButton(
-            child: Text('Request Permissions'),
+            child: const Text('Request Permissions'),
             onPressed: () async {
               Permission.locationWhenInUse.request().then((ignored) {
                 fetchPermissionStatusGPS();
@@ -2001,9 +1992,9 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
               await box.put('GPS', hasPermissionsGPS);
             },
           ),
-          SizedBox(height: 16),
+          const SizedBox(height: 16),
           ElevatedButton(
-            child: Text('Open App Settings'),
+            child: const Text('Open App Settings'),
             onPressed: () async {
               openAppSettings().then((opened) {
                 if (Permission.locationAlways.isGranted == true) {

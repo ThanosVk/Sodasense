@@ -2,7 +2,6 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:hive/hive.dart';
-import 'package:permission_handler/permission_handler.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:thesis/EditProfile.dart';
 import 'package:thesis/Sidemenu.dart';
@@ -106,6 +105,7 @@ class _SettingsState extends State<Settings> {
       height_msg = 'Valid height';
       print(height_msg);
     }
+    return null;
   }
 
   //Function for testing if height textfield is changed for the first time
@@ -124,7 +124,7 @@ class _SettingsState extends State<Settings> {
     return Scaffold(
       drawer: Sidemenu(),
       appBar: AppBar(
-        title: Text('Settings'),
+        title: const Text('Settings'),
       ),
       body: SafeArea(
         child: ListView(
@@ -133,12 +133,12 @@ class _SettingsState extends State<Settings> {
               shadowColor: Colors.grey,
               elevation: 10,
               clipBehavior: Clip.antiAlias,
-              margin: EdgeInsets.only(left: 10, right: 10, bottom: 10, top: 10),
+              margin: const EdgeInsets.only(left: 10, right: 10, bottom: 10, top: 10),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(40),
               ),
               child: SwitchListTile.adaptive(
-                  title: Text('Toggle between light and dark theme'),
+                  title: const Text('Toggle between light and dark theme'),
                   value: themeProvider.isDarkMode,
                   onChanged: (value) {
                     final provider =
@@ -150,31 +150,31 @@ class _SettingsState extends State<Settings> {
               shadowColor: Colors.grey,
               elevation: 10,
               clipBehavior: Clip.antiAlias,
-              margin: EdgeInsets.only(left: 10, right: 10, bottom: 10, top: 10),
+              margin: const EdgeInsets.only(left: 10, right: 10, bottom: 10, top: 10),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(40),
               ),
               child: ListTile(
-                  title: Text('Edit profile'),
+                  title: const Text('Edit profile'),
                   onTap: () => Navigator.push(context,
-                      MaterialPageRoute(builder: (context) => EditProfile()))),
+                      MaterialPageRoute(builder: (context) => const EditProfile()))),
             ),
             Card(
               shadowColor: Colors.grey,
               elevation: 10,
               clipBehavior: Clip.antiAlias,
-              margin: EdgeInsets.only(left: 10, right: 10, bottom: 10, top: 10),
+              margin: const EdgeInsets.only(left: 10, right: 10, bottom: 10, top: 10),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(40),
               ),
               child: ListTile(
-                title: Text('Change sampling rate of sensors'),
+                title: const Text('Change sampling rate of sensors'),
                 onTap: () => showDialog(
                     context: context,
                     builder: (context) => StatefulBuilder(builder:
                             (BuildContext context, StateSetter setState) {
                           return AlertDialog(
-                            title: Text(
+                            title: const Text(
                                 'Set the sampling rate in seconds of all the sensors on the Sensors screen (the default is 10 seconds)',
                                 textAlign: TextAlign.justify),
                             content: SizedBox(
@@ -207,7 +207,7 @@ class _SettingsState extends State<Settings> {
                                         Navigator.pop(
                                             context, box.get('sensors_sr')),
                                       },
-                                  child: Text('Ok')),
+                                  child: const Text('Ok')),
                             ],
                             shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(10.0)),
@@ -219,18 +219,18 @@ class _SettingsState extends State<Settings> {
               shadowColor: Colors.grey,
               elevation: 10,
               clipBehavior: Clip.antiAlias,
-              margin: EdgeInsets.only(left: 10, right: 10, bottom: 10, top: 10),
+              margin: const EdgeInsets.only(left: 10, right: 10, bottom: 10, top: 10),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(40),
               ),
               child: ListTile(
-                title: Text('Change sampling rate of altitude'),
+                title: const Text('Change sampling rate of altitude'),
                 onTap: () => showDialog(
                     context: context,
                     builder: (context) => StatefulBuilder(builder:
                             (BuildContext context, StateSetter setState) {
                           return AlertDialog(
-                            title: Text(
+                            title: const Text(
                                 'Set the sampling rate in seconds of altitude (the default is 5 seconds)',
                                 textAlign: TextAlign.justify),
                             content: SizedBox(
@@ -263,7 +263,7 @@ class _SettingsState extends State<Settings> {
                                         Navigator.pop(
                                             context, box.get('altitude_sr')),
                                       },
-                                  child: Text('Ok')),
+                                  child: const Text('Ok')),
                             ],
                             shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(10.0)),
@@ -275,17 +275,17 @@ class _SettingsState extends State<Settings> {
               shadowColor: Colors.grey,
               elevation: 10,
               clipBehavior: Clip.antiAlias,
-              margin: EdgeInsets.only(left: 10, right: 10, bottom: 10, top: 10),
+              margin: const EdgeInsets.only(left: 10, right: 10, bottom: 10, top: 10),
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(40)),
               child: ListTile(
-                  title: Text('Change steps, height and gender'),
+                  title: const Text('Change steps, height and gender'),
                   onTap: () => showDialog(
                         context: context,
                         builder: (context) => StatefulBuilder(builder:
                             (BuildContext context, StateSetter setState) {
                           return AlertDialog(
-                            title: Text(
+                            title: const Text(
                                 'Set your daily steps target, your gender and your height',
                                 textAlign: TextAlign.justify),
                             content: SizedBox(
@@ -293,7 +293,7 @@ class _SettingsState extends State<Settings> {
                                 child: Column(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    Text(
+                                    const Text(
                                       'You can change the daily target of steps anytime or the height by pressing the settings icon on top right corner.',
                                       style: TextStyle(fontSize: 14),
                                       textAlign: TextAlign.justify,
@@ -327,12 +327,12 @@ class _SettingsState extends State<Settings> {
                                         height_validate = height_error_msg();
                                       }),
                                     ),
-                                    SizedBox(height: 16),
+                                    const SizedBox(height: 16),
                                     ToggleButtons(
                                       isSelected: isSelected,
                                       borderRadius: BorderRadius.circular(30),
                                       color: Colors.black,
-                                      children: <Widget>[
+                                      children: const <Widget>[
                                         Text('Male'),
                                         Text('Female')
                                       ],
@@ -403,7 +403,7 @@ class _SettingsState extends State<Settings> {
                                                 context, steps_target),
                                           }
                                       },
-                                  child: Text('Ok')),
+                                  child: const Text('Ok')),
                             ],
                             shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(10.0)),
@@ -416,12 +416,12 @@ class _SettingsState extends State<Settings> {
               shadowColor: Colors.grey,
               elevation: 10,
               clipBehavior: Clip.antiAlias,
-              margin: EdgeInsets.only(left: 10, right: 10, bottom: 10, top: 10),
+              margin: const EdgeInsets.only(left: 10, right: 10, bottom: 10, top: 10),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(40),
               ),
               child: ListTile(
-                title: Text('Save DB to downloads'),
+                title: const Text('Save DB to downloads'),
                 onTap: () async {
                   final dbFolder = await getDatabasesPath();
                   File source1 = File('$dbFolder/db.db');

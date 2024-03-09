@@ -113,7 +113,7 @@ class EditProfileState extends State<EditProfile> {
                             image: selectedImage != null
                                 ? FileImage(selectedImage!)
                                     as ImageProvider<Object>
-                                : AssetImage('assets/user.png'),
+                                : const AssetImage('assets/user.png'),
                           ),
                         ),
                       ),
@@ -152,6 +152,12 @@ class EditProfileState extends State<EditProfile> {
                     onPressed: () {
                       Navigator.pop(context);
                     },
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 50),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                    ),
                     child: const Text(
                       "CANCEL",
                       style: TextStyle(
@@ -160,16 +166,9 @@ class EditProfileState extends State<EditProfile> {
                         color: Colors.black,
                       ),
                     ),
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 50),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                    ),
                   ),
                   ElevatedButton(
                     onPressed: () async {
-                      String updatedName = fullNameController.text;
                       String updatedEmail = emailController.text;
                       String updatedUsername = fullNameController
                           .text; // Use the same text as for full name
@@ -213,19 +212,19 @@ class EditProfileState extends State<EditProfile> {
                             'Failed to update profile', Colors.red);
                       }
                     },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.cyan,
+                      padding: const EdgeInsets.symmetric(horizontal: 50),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                    ),
                     child: const Text(
                       "SAVE",
                       style: TextStyle(
                         fontSize: 15,
                         letterSpacing: 2,
                         color: Colors.white,
-                      ),
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      primary: Colors.cyan,
-                      padding: const EdgeInsets.symmetric(horizontal: 50),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
                       ),
                     ),
                   )

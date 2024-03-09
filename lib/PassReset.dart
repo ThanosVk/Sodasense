@@ -39,8 +39,8 @@ class _PassResetState extends State<PassReset> {
 
     Container(
       alignment: Alignment.centerLeft,
-      padding: EdgeInsets.symmetric(horizontal: 40),
-      child: Text(
+      padding: const EdgeInsets.symmetric(horizontal: 40),
+      child: const Text(
         "Password Reset",
         style: TextStyle(
         fontWeight: FontWeight.bold,
@@ -54,10 +54,10 @@ class _PassResetState extends State<PassReset> {
 
     Container(
       alignment: Alignment.center,
-      margin: EdgeInsets.symmetric(horizontal: 40),
+      margin: const EdgeInsets.symmetric(horizontal: 40),
       child: TextFormField(
         controller: txtController,
-        decoration: InputDecoration(labelText: "Enter Email"),
+        decoration: const InputDecoration(labelText: "Enter Email"),
         validator: (value) {
           if (value == null || value.isEmpty) {
             return 'Email can\'t be empty';
@@ -73,7 +73,7 @@ class _PassResetState extends State<PassReset> {
 
     Container(
       alignment: Alignment.centerRight,
-      margin: EdgeInsets.symmetric(horizontal: 40, vertical: 10),
+      margin: const EdgeInsets.symmetric(horizontal: 40, vertical: 10),
       child: ElevatedButton(
         onPressed: () async {
           if (_formKey.currentState!.validate()) {
@@ -92,7 +92,7 @@ class _PassResetState extends State<PassReset> {
         toastLength: Toast.LENGTH_SHORT,
         gravity: ToastGravity.BOTTOM
       );
-    Navigator.push(context, MaterialPageRoute(builder: (context) => Login()));
+    Navigator.push(context, MaterialPageRoute(builder: (context) => const Login()));
     } else {
       Fluttertoast.showToast(
       msg: 'Failed to reset password. Please try again.',
@@ -110,7 +110,7 @@ class _PassResetState extends State<PassReset> {
       height: 50.0,
       width: size.width * 0.5,
       padding: const EdgeInsets.all(0),
-      child: Text(
+      child: const Text(
         "Reset",
         textAlign: TextAlign.center,
         style: TextStyle(
