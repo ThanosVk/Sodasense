@@ -8,7 +8,6 @@ import 'package:thesis/main.dart';
 import 'package:email_validator/email_validator.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 // import 'package:mongo_dart/mongo_dart.dart' as mongo;
-import 'dart:math';
 import 'dart:convert';
 import 'package:crypto/crypto.dart';
 import 'package:http/http.dart' as http;
@@ -92,6 +91,7 @@ class SignupState extends State<Signup> {
       user_msg='Valid username';
       print(user_msg);
     }
+    return null;
   }
 
   //Function for displaying the correct error message on email textfield
@@ -114,6 +114,7 @@ class SignupState extends State<Signup> {
       mail_msg='Valid email';
       print(mail_msg);
     }
+    return null;
   }
 
   //Function for displaying the correct error message on password textfield
@@ -142,6 +143,7 @@ class SignupState extends State<Signup> {
         print(pass_msg);
       }
     }
+    return null;
   }
 
   //Function for displaying the correct error message on confirmation password textfield
@@ -165,6 +167,7 @@ class SignupState extends State<Signup> {
         print(conf_msg);
       }
     }
+    return null;
   }
 
   //Function for testing if username textfield is changed for the first time

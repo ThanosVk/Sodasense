@@ -31,6 +31,7 @@ import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart' as foundation;
 import 'package:geolocator/geolocator.dart' as geo;
 import 'package:location/location.dart' as loc;
+import 'dart:math';
 
 String? saved_mail, saved_pass;
 var box;
@@ -195,6 +196,8 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
   // String date = DateFormat('dd-MM-yyyy-HH-mm-ss').format(DateTime.now());
   //Date for using date in the database
   int date = 0;
+
+  int maxYAxisValue = 100;
 
   String date_once = DateFormat('dd-MM-yyyy').format(DateTime.now());
 
@@ -528,6 +531,18 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
     });
 
     _tooltip = TooltipBehavior(enable: true);
+
+    fetchWeeklyStepsData();
+  }
+
+  // Method to fetch weekly steps data
+  void fetchWeeklyStepsData() async {
+    // Fetch step count data for each day of the current week
+    // Update the state to reflect the new data
+    setState(() {
+      getStepsByDay();
+      generateData();
+    });
   }
 
   @override
@@ -1156,6 +1171,7 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
     generateData();
   }
 
+  // Adjusted this method to correctly determine the step count for each day
   void generateData() {
     DateTime currentDate = DateTime.now();
     DateTime startOfWeek =
@@ -1163,17 +1179,26 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
 // changed from 6 to 7
 
     List<ChartData> generatedData = [];
+    int maxSteps = 0;
 
     for (int i = 0; i < 7; i++) {
       DateTime date = startOfWeek.add(Duration(days: i));
-      String dayOfWeek =
-          DateFormat('EEE').format(date); // Three-letter day abbreviation
+      int stepsForDay = getStepCountForDate(date);
+      maxSteps = max(maxSteps, stepsForDay); // Update maxSteps
+      String dayOfWeek = DateFormat('EEE').format(date); // Three-letter day abbreviation
       String formattedDate = DateFormat('dd/MM').format(date); // dd/mm format
-      generatedData.add(
-          ChartData('$dayOfWeek\n$formattedDate', getStepCountForDate(date)));
+      generatedData.add(ChartData('$dayOfWeek\n$formattedDate', getStepCountForDate(date)));
     }
 
     data = generatedData;
+    updateGraphMaxValue(maxSteps + 100);
+  }
+
+  // New method to update the maximum value on the graph
+  void updateGraphMaxValue(int newMaxValue) {
+    setState(() {
+      maxYAxisValue = newMaxValue;
+    });
   }
 
   int getStepCountForDate(DateTime date) {
@@ -1287,28 +1312,24 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
                               children: <Widget>[
                                 Center(
                                     child: SfCartesianChart(
-                                                                      primaryXAxis: const CategoryAxis(
-                                                                        majorGridLines: MajorGridLines(
+                                      primaryXAxis: const CategoryAxis(
+                                        majorGridLines: MajorGridLines(
                                     color: Colors.transparent),
-                                                                        labelIntersectAction:
+                                        labelIntersectAction:
                                     AxisLabelIntersectAction.rotate45,
-                                                                        labelStyle: TextStyle(
-                                                                          color: Colors.black,
-                                                                          fontSize: 14,
-                                                                        ),
-                                                                      ),
-                                                                      primaryYAxis: NumericAxis(
-                                                                        minimum: 0,
-                                                                        maximum:
-                                    box.get('target_steps').toDouble() +
-                                        100,
-                                                                        interval:
-                                    box.get('target_steps').toDouble() /
-                                        10,
-                                                                        majorGridLines: const MajorGridLines(
+                                        labelStyle: TextStyle(
+                                          color: Colors.black,
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                      primaryYAxis: NumericAxis(
+                                        minimum: 0,
+                                        maximum: maxYAxisValue.toDouble(),
+                                        interval: maxYAxisValue / 10,
+                                        majorGridLines: const MajorGridLines(
                                     color: Colors
                                         .transparent), // Hide minor tick lines
-                                                                        labelIntersectAction:
+                                        labelIntersectAction:
                                     AxisLabelIntersectAction.rotate45,
                                                                         labelStyle: const TextStyle(
                                                                           color: Colors.black,

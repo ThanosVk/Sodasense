@@ -335,7 +335,7 @@ class NavigationState extends State<Navigation> {
     final themeProvider = Provider.of<ThemeProvider>(context);
 
     return Scaffold(
-        drawer: Sidemenu(),
+        drawer: const Sidemenu(),
         appBar: AppBar(
             title: const Text("Route"),
             systemOverlayStyle:
@@ -409,7 +409,7 @@ class NavigationState extends State<Navigation> {
                     TappablePolylineLayer(
                         polylineCulling: true,
                         pointerDistanceTolerance: 20,
-                        onTap: (polylines, tapPosition) => print('Tapped: ${polylines.map((polyline) => polyline.tag).join(',')}at${tapPosition.globalPosition}'),
+                        onTap: (polylines, tapPosition) => print('Tapped: ' + polylines.map((polyline) => polyline.tag).join(',') + 'at' + tapPosition.globalPosition.toString()),
                         polylines:
                         [
                           TaggedPolyline(
