@@ -1356,6 +1356,7 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
                                 ),
                               ),
                               padding: const EdgeInsets.all(16),
+                              child: SingleChildScrollView(
                               child: Column(
                                 children: [
                                   Row(
@@ -1535,23 +1536,21 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
                                     children: <Widget>[
                                       Center(
                                         child: SizedBox(
-                                            height: 160,
+                                            height: 130,
                                             width: 160,
                                             child: Stack(
                                               fit: StackFit.expand,
                                               children: [
-                                                LiquidCircularProgressIndicator(
-                                                    value: steps == '0' &&
-                                                            box.get('today_steps') !=
-                                                                null
-                                                        ? box.get(
-                                                                'today_steps') /
-                                                            box.get(
-                                                                'target_steps')
+                                                FittedBox(
+                                                  fit: BoxFit.fitWidth, // This ensures that the child scales down its width to fit into the parent
+                                                  child: LiquidCircularProgressIndicator(
+                                                    value: (steps == '0' && box.get('today_steps') != null)
+                                                        ? box.get('today_steps') / box.get('target_steps')
                                                         : 0,
-                                                    backgroundColor:
-                                                        const Color(0xfff8f9f9),
-                                                    direction: Axis.vertical),
+                                                    backgroundColor: const Color(0xfff8f9f9),
+                                                    direction: Axis.vertical,
+                                                  ),
+                                                ),
                                                 Center(
                                                   child: RichText(
                                                     text: TextSpan(children: [
@@ -1613,7 +1612,7 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
                                 ],
                               ),
                             ),
-                          ],
+                            )],
                         ),
                       ),
                     );
@@ -1677,24 +1676,25 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
                               maximumSize: const Size(125, 35),
                             ),
                             onPressed: () => {
-                                  Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                          builder: (context) => const Compass()))
-                                },
-                            child: const Row(
+                              Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                      builder: (context) => const Compass()))
+                            },
+                            child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Text('Compass'),
-                                SizedBox(
-                                  width: 5,
+                                Flexible( // Wrap the text with Flexible
+                                  child: Text(
+                                    'Compass',
+                                    overflow: TextOverflow.ellipsis, // Using ellipsis to handle overflow
+                                  ),
                                 ),
-                                Icon(
-                                  Icons.explore_outlined,
-                                  size: 24.0,
-                                ),
+                                SizedBox(width: 5),
+                                Icon(Icons.explore_outlined, size: 24.0),
                               ],
-                            )),
+                            )
+                        ),
                       ],
                     ),
                   ],
@@ -1720,13 +1720,16 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
                                             builder: (context) =>
                                                 const sens.Sensors()))
                                   },
-                              child: const Row(
+                              child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Text('Sensors'),
-                                  SizedBox(
-                                    width: 5,
+                                  Flexible( // Using Flexible here to allow the text to adjust its size to the available space
+                                    child: Text(
+                                      'Sensors',
+                                      overflow: TextOverflow.ellipsis, // Using ellipsis to handle overflow
+                                    ),
                                   ),
+                                  SizedBox(width: 5),
                                   Icon(
                                     Icons.sensors_outlined,
                                     size: 24.0,
@@ -1748,13 +1751,16 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
                                       MaterialPageRoute(
                                           builder: (context) => const Settings()))
                                 },
-                            child: const Row(
+                            child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Text('Settings'),
-                                SizedBox(
-                                  width: 5,
+                                Flexible(
+                                  child: Text(
+                                    'Settings',
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
                                 ),
+                                SizedBox(width: 5),
                                 Icon(
                                   Icons.settings,
                                   size: 24.0,
