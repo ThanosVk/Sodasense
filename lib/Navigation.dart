@@ -380,7 +380,7 @@ class NavigationState extends State<Navigation> {
                     TileLayer(
                       //options: TileLayerOptions(
                           urlTemplate:
-                              "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+                              "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
                           subdomains: const ['a', 'b', 'c'],
                           maxZoom: 19,
                           tileProvider: CachedTileProvider(

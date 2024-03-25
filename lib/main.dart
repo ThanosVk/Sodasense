@@ -703,9 +703,7 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
     setState(() {
       connectionStatus = result;
 
-      if ((connectionStatus == ConnectivityResult.mobile ||
-              connectionStatus == ConnectivityResult.wifi) &&
-          hasInternet == true) {
+      if ((connectionStatus == ConnectivityResult.mobile || connectionStatus == ConnectivityResult.wifi) && hasInternet == true) {
         print('Exei sundesi sto internet');
 
         update_altitude();
@@ -872,8 +870,7 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
   //update_daily_steps for updating the ununpdated daily_steps fields from the local db
   update_daily_steps() async {
     //load daily_steps from local db to a list map and then to a list of objects
-    List<Map> dsteps =
-        await SqlDatabase.instance.select_daily_steps_unupdated();
+    List<Map> dsteps = await SqlDatabase.instance.select_daily_steps_unupdated();
     List<Object> arr = List<Map>.from(dsteps);
 
     var response = await http.post(
@@ -1295,14 +1292,14 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
                           carouselController: CarouselController(),
                           options: CarouselOptions(
                             reverse: true,
-                            height: 300,
+                            height: MediaQuery.of(context).size.height * 0.4,
                             scrollDirection: Axis.horizontal,
                             enlargeCenterPage: true,
                             enlargeStrategy: CenterPageEnlargeStrategy.height,
                             enableInfiniteScroll: false,
                             initialPage: 1,
                             enlargeFactor: 1.5,
-                            viewportFraction: 1,
+                            viewportFraction: 1.0,
                             disableCenter: true,
                           ),
                           items: [
@@ -1346,8 +1343,8 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
                               ],
                             ),
                             Container(
-                              width: double.maxFinite,
-                              margin: const EdgeInsets.symmetric(horizontal: 20),
+                              width: MediaQuery.of(context).size.width,
+                              margin: const EdgeInsets.symmetric(horizontal: 0),
                               decoration: const BoxDecoration(
                                 gradient: LinearGradient(
                                   colors: [Colors.white, Colors.white],
@@ -1639,8 +1636,8 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
                         children: [
                           ElevatedButton(
                             style: ElevatedButton.styleFrom(
-                              minimumSize: const Size(125, 35),
-                              maximumSize: const Size(125, 35),
+                              minimumSize: Size(MediaQuery.of(context).size.width * 0.3, 50),
+                              maximumSize: Size(MediaQuery.of(context).size.width * 0.3, 50),
                             ),
                             onPressed: () => {
                               Navigator.push(
@@ -1672,8 +1669,8 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
                       children: [
                         ElevatedButton(
                             style: ElevatedButton.styleFrom(
-                              minimumSize: const Size(125, 35),
-                              maximumSize: const Size(125, 35),
+                              minimumSize: Size(MediaQuery.of(context).size.width * 0.3, 50),
+                              maximumSize: Size(MediaQuery.of(context).size.width * 0.3, 50),
                             ),
                             onPressed: () => {
                               Navigator.push(
@@ -1681,7 +1678,7 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
                                   MaterialPageRoute(
                                       builder: (context) => const Compass()))
                             },
-                            child: Row(
+                            child: const Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Flexible( // Wrap the text with Flexible
@@ -1710,8 +1707,8 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
                         children: [
                           ElevatedButton(
                               style: ElevatedButton.styleFrom(
-                                minimumSize: const Size(125, 35),
-                                maximumSize: const Size(125, 35),
+                                minimumSize: Size(MediaQuery.of(context).size.width * 0.3, 50),
+                                maximumSize: Size(MediaQuery.of(context).size.width * 0.3, 50),
                               ),
                               onPressed: () => {
                                     Navigator.push(
@@ -1720,7 +1717,7 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
                                             builder: (context) =>
                                                 const sens.Sensors()))
                                   },
-                              child: Row(
+                              child: const Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   Flexible( // Using Flexible here to allow the text to adjust its size to the available space
@@ -1742,8 +1739,8 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
                       children: [
                         ElevatedButton(
                             style: ElevatedButton.styleFrom(
-                              minimumSize: const Size(125, 35),
-                              maximumSize: const Size(125, 35),
+                              minimumSize: Size(MediaQuery.of(context).size.width * 0.3, 50),
+                              maximumSize: Size(MediaQuery.of(context).size.width * 0.3, 50),
                             ),
                             onPressed: () => {
                                   Navigator.push(
@@ -1751,7 +1748,7 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
                                       MaterialPageRoute(
                                           builder: (context) => const Settings()))
                                 },
-                            child: Row(
+                            child: const Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Flexible(
@@ -1782,8 +1779,8 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
                         children: [
                           ElevatedButton(
                             style: ElevatedButton.styleFrom(
-                              minimumSize: const Size(125, 35),
-                              maximumSize: const Size(125, 35),
+                              minimumSize: Size(MediaQuery.of(context).size.width * 0.3, 50),
+                              maximumSize: Size(MediaQuery.of(context).size.width * 0.3, 50),
                             ),
                             onPressed: () => {
                               showDialog(
