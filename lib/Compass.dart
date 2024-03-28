@@ -125,7 +125,7 @@ class _CompassState extends State<Compass> {
     Size size = MediaQuery.of(context).size;
 
     return Scaffold(
-      drawer: Sidemenu(),
+      drawer: const Sidemenu(),
       appBar: AppBar(
         title: const Text("Compass"),
         actions: <Widget>[
@@ -197,12 +197,12 @@ class _CompassState extends State<Compass> {
                                     text: 'Lat: ',
                                     style: TextStyle(
                                         fontWeight: FontWeight.bold)),
-                                TextSpan(text: '${lat},'),
+                                TextSpan(text: '$lat,'),
                                 const TextSpan(
                                     text: ' Lon: ',
                                     style: TextStyle(
                                         fontWeight: FontWeight.bold)),
-                                TextSpan(text: '${lng}'),
+                                TextSpan(text: '$lng'),
                               ]
                             : [TextSpan(text: loc)]),
                   ),
