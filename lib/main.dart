@@ -370,9 +370,25 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
     return height_count;
   }
 
+  void setupLocationListener() {
+    if (box.get('GPS') == true) {
+      location.onLocationChanged.listen((loc.LocationData cLoc) {
+        if (!mounted) return; // Check if widget is still in the tree
+        setState(() {
+          currentLocation = cLoc;
+          setpoint(cLoc.latitude, cLoc.longitude);
+        });
+        insert_toDb_GPS();
+        print('Oi suntetagmenes einai $lat, $lng');
+      });
+    }
+  }
+
   @override
   void initState() {
     super.initState();
+
+    setupLocationListener(); // Initialize location listener
 
     WidgetsBinding.instance.addObserver(this);
 
@@ -401,8 +417,7 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
 
     initConnectivity();
 
-    connectivitySubscription =
-        connectivity.onConnectivityChanged.listen(updateConnectionStatus);
+    connectivitySubscription = connectivity.onConnectivityChanged.listen(updateConnectionStatus);
 
     //Sensors
     check_pressure_availability();
@@ -515,15 +530,6 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
 
     // fetchPermissionStatusGPS();
 
-    if (box.get('GPS') == true) {
-      location.onLocationChanged.listen((loc.LocationData cLoc) {
-        currentLocation = cLoc;
-        setpoint(cLoc.latitude, cLoc.longitude);
-
-        insert_toDb_GPS();
-        print('Oi suntetagmenes einai $lat, $lng');
-      });
-    }
     // getsensors();
     setState(() {
       getStepsByDay();
@@ -1373,7 +1379,25 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
                                                       color: Colors.black,
                                                       fontSize: 26)),
                                             ]),
-                                          )
+                                          ),
+                                          const Positioned(
+                                            top: 16, // Adjust as necessary
+                                            right: 16, // Adjust as necessary
+                                            child: Row(
+                                              mainAxisSize: MainAxisSize.min, // To keep the row as big as its children
+                                              children: const [
+                                              Text(
+                                                'Swipe left for chart',
+                                                style: TextStyle(
+                                                  // Style as necessary
+                                                  color: Colors.black,
+                                                  fontSize: 16,
+                                                ),
+                                              ),
+                                              Icon(
+                                                Icons.arrow_forward_ios,
+                                                size: 24,), // Arrow pointing right
+                                          ])),
                                         ],
                                       ),
                                       Column(
@@ -1578,7 +1602,7 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
                                                               )))
                                                     ]),
                                                   ),
-                                                )
+                                                ),
                                               ],
                                             )),
                                       ),
@@ -1822,7 +1846,12 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
                             child: const Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Text('Logout'),
+                                Flexible(
+                                  child: Text(
+                                    'Logout',
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
                                 SizedBox(
                                   width: 5,
                                 ),

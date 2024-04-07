@@ -130,7 +130,7 @@ class _CompassState extends State<Compass> {
         title: const Text("Compass"),
         actions: <Widget>[
           IconButton(
-              alignment: Alignment.center,
+              //alignment: Alignment.center,
               icon: const Icon(Icons.location_on_outlined),
               onPressed: () => {
                     getData(),
@@ -155,6 +155,7 @@ class _CompassState extends State<Compass> {
         ],
       ),
       body: SafeArea(
+      child: SingleChildScrollView(
         child: Center(
           child: Builder(builder: (context) {
             if (hasPermissions) {
@@ -228,7 +229,7 @@ class _CompassState extends State<Compass> {
           }),
         ),
       ),
-    );
+    ));
   }
 
   //Widget for Compass
