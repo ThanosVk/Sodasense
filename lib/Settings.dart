@@ -7,6 +7,7 @@ import 'package:thesis/EditProfile.dart';
 import 'package:thesis/Sidemenu.dart';
 import 'package:provider/provider.dart';
 import 'package:thesis/Theme_provider.dart';
+import 'package:file_picker/file_picker.dart';
 
 class Settings extends StatefulWidget {
   const Settings({Key? key}) : super(key: key);
@@ -117,12 +118,115 @@ class _SettingsState extends State<Settings> {
     }
   }
 
+  //Function to check for valid file
+  Future<bool> isValidDatabaseFile(File file) async {
+    // List of expected table names in your database
+    const expectedTables = [
+      'coordinates',
+      'altitude',
+      'pressure',
+      'acceleration',
+      'gyroscope',
+      'magnetometer',
+      'proximity',
+      'daily_steps',
+      'sensors'
+    ];
+
+    // Check if the file is not empty
+    if (await file.length() == 0) {
+      Fluttertoast.showToast(
+        msg: 'The file is empty',
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.BOTTOM,
+      );
+      return false;
+    }
+
+    // Check if the file has the correct '.db' extension
+    if (!file.path.endsWith('.db')) {
+      Fluttertoast.showToast(
+        msg: 'The file is not a valid database file',
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.BOTTOM,
+      );
+      return false;
+    }
+
+    try {
+      final db = await openDatabase(file.path);
+
+      // Check each table
+      for (var tableName in expectedTables) {
+        final tableExistsResult = await db.rawQuery(
+            'SELECT name FROM sqlite_master WHERE type="table" AND name="$tableName";');
+
+        if (tableExistsResult.isEmpty) {
+          Fluttertoast.showToast(
+            msg: 'The database is missing required table: $tableName',
+            toastLength: Toast.LENGTH_SHORT,
+            gravity: ToastGravity.BOTTOM,
+          );
+          await db.close();
+          return false;
+        }
+      }
+
+      // All required tables are found
+      await db.close();
+      return true;
+    } catch (e) {
+      // If an exception occurs, the database file is not valid
+      Fluttertoast.showToast(
+        msg: 'Failed to open the database. Error: $e',
+        toastLength: Toast.LENGTH_LONG,
+        gravity: ToastGravity.BOTTOM,
+      );
+      return false;
+    }
+  }
+
+  //Function to upload database files
+  Future<void> uploadDatabase() async {
+    FilePickerResult? result = await FilePicker.platform.pickFiles();
+
+    if (result != null) {
+      File file = File(result.files.single.path!);
+
+      // Perform validation checks here
+      bool isValid = await isValidDatabaseFile(file);
+      if (!isValid) return; // If not valid, return early
+
+      final dbFolder = await getDatabasesPath();
+      String newPath = '$dbFolder/db.db';
+      File newDbFile = File(newPath);
+
+      // Replace the old database file with the new one
+      await newDbFile.delete();
+      await file.copy(newPath);
+
+      // Notify the user
+      Fluttertoast.showToast(
+        msg: 'Successfully uploaded DB',
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.BOTTOM,
+      );
+    } else {
+      // User canceled the picker or the pick failed
+      Fluttertoast.showToast(
+        msg: 'No file selected',
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.BOTTOM,
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
 
     return Scaffold(
-      drawer: Sidemenu(),
+      drawer: const Sidemenu(),
       appBar: AppBar(
         title: const Text('Settings'),
       ),
@@ -453,7 +557,21 @@ class _SettingsState extends State<Settings> {
                       gravity: ToastGravity.BOTTOM);
                 },
               ),
-            )
+            ),
+            // Add this new card for the upload functionality
+            Card(
+              shadowColor: Colors.grey,
+              elevation: 10,
+              clipBehavior: Clip.antiAlias,
+              margin: const EdgeInsets.only(left: 10, right: 10, bottom: 10, top: 10),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(40),
+              ),
+              child: ListTile(
+                title: const Text('Upload DB from downloads'),
+                onTap: uploadDatabase, // Use the uploadDatabase function here
+              ),
+            ),
           ],
         ),
       ),
