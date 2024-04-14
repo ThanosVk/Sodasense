@@ -1385,20 +1385,24 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
                                             right: 16, // Adjust as necessary
                                             child: Row(
                                               mainAxisSize: MainAxisSize.min, // To keep the row as big as its children
-                                              children: const [
-                                              Text(
-                                                'Swipe left for chart',
-                                                style: TextStyle(
-                                                  // Style as necessary
-                                                  color: Colors.black,
-                                                  fontSize: 16,
+                                              children: [
+                                                Padding(
+                                                  padding: const EdgeInsets.only(right: 8.0), // Adjust the padding if needed
+                                                  child: Text(
+                                                    'Swipe for chart',
+                                                    style: TextStyle(
+                                                      color: Colors.black,
+                                                      fontSize: 16,
+                                                    ),
+                                                  ),
                                                 ),
-                                              ),
-                                              Icon(
-                                                Icons.arrow_forward_ios,
-                                                size: 24,), // Arrow pointing right
-                                          ])),
-                                        ],
+                                                Icon(
+                                                  Icons.arrow_forward_ios,
+                                                  size: 24, // Arrow pointing right
+                                                ),
+                                              ],
+                                            ),
+                                          )],
                                       ),
                                       Column(
                                         children: [
@@ -1660,8 +1664,8 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
                         children: [
                           ElevatedButton(
                             style: ElevatedButton.styleFrom(
-                              minimumSize: Size(MediaQuery.of(context).size.width * 0.3, 50),
-                              maximumSize: Size(MediaQuery.of(context).size.width * 0.3, 50),
+                              minimumSize: Size(MediaQuery.of(context).size.width * 0.4, 50),
+                              maximumSize: Size(MediaQuery.of(context).size.width * 0.4, 50),
                             ),
                             onPressed: () => {
                               Navigator.push(
@@ -1693,8 +1697,8 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
                       children: [
                         ElevatedButton(
                             style: ElevatedButton.styleFrom(
-                              minimumSize: Size(MediaQuery.of(context).size.width * 0.3, 50),
-                              maximumSize: Size(MediaQuery.of(context).size.width * 0.3, 50),
+                              minimumSize: Size(MediaQuery.of(context).size.width * 0.4, 50),
+                              maximumSize: Size(MediaQuery.of(context).size.width * 0.4, 50),
                             ),
                             onPressed: () => {
                               Navigator.push(
@@ -1731,8 +1735,8 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
                         children: [
                           ElevatedButton(
                               style: ElevatedButton.styleFrom(
-                                minimumSize: Size(MediaQuery.of(context).size.width * 0.3, 50),
-                                maximumSize: Size(MediaQuery.of(context).size.width * 0.3, 50),
+                                minimumSize: Size(MediaQuery.of(context).size.width * 0.4, 50),
+                                maximumSize: Size(MediaQuery.of(context).size.width * 0.4, 50),
                               ),
                               onPressed: () => {
                                     Navigator.push(
@@ -1763,8 +1767,8 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
                       children: [
                         ElevatedButton(
                             style: ElevatedButton.styleFrom(
-                              minimumSize: Size(MediaQuery.of(context).size.width * 0.3, 50),
-                              maximumSize: Size(MediaQuery.of(context).size.width * 0.3, 50),
+                              minimumSize: Size(MediaQuery.of(context).size.width * 0.4, 50),
+                              maximumSize: Size(MediaQuery.of(context).size.width * 0.4, 50),
                             ),
                             onPressed: () => {
                                   Navigator.push(
@@ -1803,8 +1807,8 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
                         children: [
                           ElevatedButton(
                             style: ElevatedButton.styleFrom(
-                              minimumSize: Size(MediaQuery.of(context).size.width * 0.3, 50),
-                              maximumSize: Size(MediaQuery.of(context).size.width * 0.3, 50),
+                              minimumSize: Size(MediaQuery.of(context).size.width * 0.4, 50),
+                              maximumSize: Size(MediaQuery.of(context).size.width * 0.4, 50),
                             ),
                             onPressed: () => {
                               showDialog(
@@ -1910,6 +1914,7 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
                               style: TextStyle(fontSize: 14),
                               textAlign: TextAlign.justify,
                             ),
+                            const SizedBox(height: 16),
                             TextField(
                               maxLength: 5,
                               controller: stepController,
@@ -1917,6 +1922,7 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
                                   labelText: "Steps Target", counterText: ''),
                               keyboardType: TextInputType.number,
                             ),
+                            const SizedBox(height: 16),
                             TextField(
                               maxLength: 3,
                               controller: heightController,
