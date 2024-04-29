@@ -197,22 +197,59 @@ class _SettingsState extends State<Settings> {
       bool isValid = await isValidDatabaseFile(file);
       if (!isValid) return; // If not valid, return early
 
-      final dbFolder = await getDatabasesPath();
-      String newPath = '$dbFolder/db.db';
-      File newDbFile = File(newPath);
+      final dbPath = await getDatabasesPath();
+      String existingDbPath = '$dbPath/db.db';
 
-      // Replace the old database file with the new one
-      await newDbFile.delete();
-      await file.copy(newPath);
+      try {
+        final newDb = await openDatabase(file.path);
+        final existingDb = await openDatabase(existingDbPath);
 
-      // Notify the user
-      Fluttertoast.showToast(
-        msg: 'Successfully uploaded DB',
-        toastLength: Toast.LENGTH_SHORT,
-        gravity: ToastGravity.BOTTOM,
-      );
+        // List of tables to check and merge
+        const tables = [
+          'coordinates', 'altitude', 'pressure', 'acceleration',
+          'gyroscope', 'magnetometer', 'proximity', 'daily_steps', 'sensors'
+        ];
+
+        for (String table in tables) {
+          // Get all entries from the new database for a table
+          List<Map> newEntries = await newDb.query(table);
+
+          // Iterate through each entry to check for duplicates
+          for (var newEntry in newEntries) {
+            // Cast Map<dynamic, dynamic> to Map<String, Object?>
+            Map<String, Object?> castedEntry = newEntry.map((key, value) => MapEntry(key.toString(), value));
+
+            // Assuming 'id' is the primary key
+            var exists = await existingDb.query(table,
+                where: 'id = ?', whereArgs: [castedEntry['id']]);
+
+            if (exists.isEmpty) {
+              // If the entry does not exist in the existing database, insert it
+              await existingDb.insert(table, castedEntry);
+            }
+            // If the entry exists, it is skipped
+          }
+        }
+
+        await newDb.close();
+        await existingDb.close();
+
+        // Notify the user of successful merge
+        Fluttertoast.showToast(
+          msg: 'Database updated with new entries',
+          toastLength: Toast.LENGTH_SHORT,
+          gravity: ToastGravity.BOTTOM,
+        );
+      } catch (e) {
+        // If an error occurs during the database operation, notify the user
+        Fluttertoast.showToast(
+          msg: 'Error updating database: $e',
+          toastLength: Toast.LENGTH_LONG,
+          gravity: ToastGravity.BOTTOM,
+        );
+      }
     } else {
-      // User canceled the picker or the pick failed
+      // If no file was selected, notify the user
       Fluttertoast.showToast(
         msg: 'No file selected',
         toastLength: Toast.LENGTH_SHORT,
