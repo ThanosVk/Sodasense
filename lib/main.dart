@@ -370,16 +370,43 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
     return height_count;
   }
 
+  // Declare a variable to hold the previous location
+  loc.LocationData? previousLocation;
+
   void setupLocationListener() {
     if (box.get('GPS') == true) {
       location.onLocationChanged.listen((loc.LocationData cLoc) {
-        if (!mounted) return; // Check if widget is still in the tree
-        setState(() {
-          currentLocation = cLoc;
-          setpoint(cLoc.latitude, cLoc.longitude);
-        });
-        insert_toDb_GPS();
-        print('Oi suntetagmenes einai $lat, $lng');
+        if (!mounted) return; // Check if the widget is still in the tree
+
+        // Only process if current location has valid coordinates
+        if (cLoc.latitude != null && cLoc.longitude != null) {
+          // Only update and record the new location if it is significantly different from the last recorded location
+          double distanceMoved = previousLocation != null && previousLocation!.latitude != null && previousLocation!.longitude != null
+              ? geo.Geolocator.distanceBetween(
+              previousLocation!.latitude!,
+              previousLocation!.longitude!,
+              cLoc.latitude!,
+              cLoc.longitude!
+          )
+              : 0;
+
+          // Check if moved more than 1.5 kilometers
+          if (distanceMoved > 1500) {
+            setState(() {
+              currentLocation = cLoc;
+              setpoint(cLoc.latitude!, cLoc.longitude!);
+            });
+            insert_toDb_GPS();
+            print('Recording new location: Latitude ${cLoc.latitude}, Longitude ${cLoc.longitude}');
+          } else {
+            print('Moved ${distanceMoved} meters, not enough to record new location.');
+          }
+
+          // Update previous location with current for next comparison
+          previousLocation = cLoc;
+        } else {
+          print('Current location has null latitude or longitude, unable to calculate distance.');
+        }
       });
     }
   }
@@ -1387,7 +1414,7 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
                                               mainAxisSize: MainAxisSize.min, // To keep the row as big as its children
                                               children: [
                                                 Padding(
-                                                  padding: const EdgeInsets.only(right: 8.0), // Adjust the padding if needed
+                                                  padding: EdgeInsets.only(right: 8.0), // Adjust the padding if needed
                                                   child: Text(
                                                     'Swipe for chart',
                                                     style: TextStyle(
