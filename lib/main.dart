@@ -173,19 +173,19 @@ String formatDate(DateTime d) {
 class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
   final stepController = TextEditingController(),
       heightController =
-          TextEditingController(); //stepController for getting steps target, heightController for getting height
+      TextEditingController(); //stepController for getting steps target, heightController for getting height
   //steps_count for getting the value of stepController, steps_target for getting the value of textfield, height _count for getting the value of height Controller
   //height for getting the value from heightController Textfield
   int steps_count = 0, steps_target = 0, height_count = 0, height = 0;
   double steps_length = 0,
       dist =
-          0; //steps_length for finding the exact meters per user height,dist for distance in km
+      0; //steps_length for finding the exact meters per user height,dist for distance in km
   late Stream<StepCount> _stepCountStream;
   String steps = '0';
   int numsteps = 0, sum_steps = 0;
   bool hasPermissions = false,
       height_check =
-          false; //hasPermissions for knowing if the device has permissions for activity sensor,height_check to know if height Textfield contains something
+      false; //hasPermissions for knowing if the device has permissions for activity sensor,height_check to know if height Textfield contains something
   bool height_validate = true; // height_validate for height validate textfield
   late List<bool> isSelected = [
     true,
@@ -205,7 +205,7 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
   final Connectivity connectivity = Connectivity();
   late StreamSubscription<ConnectivityResult> connectivitySubscription;
   bool hasInternet =
-      false; //for checking if the device is connected to the internet
+  false; //for checking if the device is connected to the internet
 
   //var box = Hive.box('user').add(user);
 
@@ -214,7 +214,7 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
   //Sensors variables
   int srt = 10,
       ttl_stps =
-          0; //srt for sampling rate time of sensors, ttl_stps for getting the sum of the daily steps
+      0; //srt for sampling rate time of sensors, ttl_stps for getting the sum of the daily steps
   double ax = 0,
       ay = 0,
       az = 0,
@@ -225,7 +225,7 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
       my = 0,
       mz = 0,
       pressure =
-          0; //a for user accelerometer, g for gyroscope, m  for magnetometer, pressure for getting the value of pressure
+      0; //a for user accelerometer, g for gyroscope, m  for magnetometer, pressure for getting the value of pressure
   String amsg = '',
       gmsg = '',
       mmsg = '',
@@ -251,13 +251,13 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
   static const magn_channel = MethodChannel('magnetometer_channel');
 
   static const pressure_channel =
-      EventChannel('pressure_channel'); //Channel for communicating with android
+  EventChannel('pressure_channel'); //Channel for communicating with android
   StreamSubscription? pressureSubscription;
 
   //Location variables
   bool hasPermissionsGPS = false,
       serviceEnabled =
-          false; //hasPermissions if the gps permissions are given, serviceEnabled if the gps is enabled
+      false; //hasPermissions if the gps permissions are given, serviceEnabled if the gps is enabled
   double lat = 0,
       lng = 0; //lat for getting the latitude, lng for getting the longitude
 
@@ -285,7 +285,7 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
         channelId: 'notification_channel_id',
         channelName: 'Foreground Notification',
         channelDescription:
-            'This notification appears when the foreground service is running.',
+        'This notification appears when the foreground service is running.',
         channelImportance: NotificationChannelImportance.LOW,
         priority: NotificationPriority.LOW,
         iconData: const NotificationIconData(
@@ -295,7 +295,7 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
         ),
       ),
       iosNotificationOptions:
-          const IOSNotificationOptions(showNotification: true, playSound: true),
+      const IOSNotificationOptions(showNotification: true, playSound: true),
       foregroundTaskOptions: const ForegroundTaskOptions(
         interval: 1000,
         autoRunOnBoot: false,
@@ -370,42 +370,23 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
     return height_count;
   }
 
-  // Declare a variable to hold the previous location
-  loc.LocationData? previousLocation;
-
   void setupLocationListener() {
     if (box.get('GPS') == true) {
       location.onLocationChanged.listen((loc.LocationData cLoc) {
-        if (!mounted) return; // Check if the widget is still in the tree
+        // Check if widget is still in the tree
+        if (!mounted) return;
 
-        // Only process if current location has valid coordinates
-        if (cLoc.latitude != null && cLoc.longitude != null) {
-          // Only update and record the new location if it is significantly different from the last recorded location
-          double distanceMoved = previousLocation != null && previousLocation!.latitude != null && previousLocation!.longitude != null
-              ? geo.Geolocator.distanceBetween(
-              previousLocation!.latitude!,
-              previousLocation!.longitude!,
-              cLoc.latitude!,
-              cLoc.longitude!
-          )
-              : 0;
+        setState(() {
+          currentLocation = cLoc;
+          setpoint(cLoc.latitude, cLoc.longitude);
+        });
 
-          // Check if moved more than 1.5 kilometers
-          if (distanceMoved > 1500) {
-            setState(() {
-              currentLocation = cLoc;
-              setpoint(cLoc.latitude!, cLoc.longitude!);
-            });
-            insert_toDb_GPS();
-            print('Recording new location: Latitude ${cLoc.latitude}, Longitude ${cLoc.longitude}');
-          } else {
-            print('Moved ${distanceMoved} meters, not enough to record new location.');
-          }
-
-          // Update previous location with current for next comparison
-          previousLocation = cLoc;
+        // Check if speed is more than 1.5 km/h (converting speed from m/s to km/h by multiplying by 3.6)
+        if (cLoc.speed != null && (cLoc.speed! * 3.6) > 1.5) {
+          insert_toDb_GPS();
+          print('GPS data recorded: ${cLoc.latitude}, ${cLoc.longitude}, Speed: ${cLoc.speed! * 3.6} km/h');
         } else {
-          print('Current location has null latitude or longitude, unable to calculate distance.');
+          print('Speed is below 1.5 km/h, current speed: ${cLoc.speed! * 3.6} km/h');
         }
       });
     }
@@ -460,7 +441,7 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
         ay = event.y;
         az = event.z;
         amsg =
-            'x:${ax.toStringAsFixed(2)} y:${ay.toStringAsFixed(2)} z:${az.toStringAsFixed(2)}';
+        'x:${ax.toStringAsFixed(2)} y:${ay.toStringAsFixed(2)} z:${az.toStringAsFixed(2)}';
         //timer_acc = Timer.periodic(Duration(seconds: 5), (Timer t) => insert_acc_toDb());
       } else {
         amsg = 'Accelerometer not available';
@@ -474,7 +455,7 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
         gy = event.y;
         gz = event.z;
         gmsg =
-            'x:${gx.toStringAsFixed(2)} y:${gy.toStringAsFixed(2)} z:${gz.toStringAsFixed(2)}';
+        'x:${gx.toStringAsFixed(2)} y:${gy.toStringAsFixed(2)} z:${gz.toStringAsFixed(2)}';
         //timer_gyro = Timer.periodic(Duration(seconds: 5), (Timer t) => insert_gyro_toDb());
       } else {
         gmsg = 'Gyroscope not available';
@@ -488,7 +469,7 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
         my = event.y;
         mz = event.z;
         mmsg =
-            'x:${mx.toStringAsFixed(2)} y:${my.toStringAsFixed(2)} z:${mz.toStringAsFixed(2)}';
+        'x:${mx.toStringAsFixed(2)} y:${my.toStringAsFixed(2)} z:${mz.toStringAsFixed(2)}';
         //timer_magn = Timer.periodic(Duration(seconds: 5), (Timer t) => insert_magn_toDb());
       } else {
         mmsg = 'Magnetometer not available';
@@ -501,17 +482,17 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
     //pressure initialization event
     StartScreen().pressureSubscription =
         StartScreen.pressure_channel.receiveBroadcastStream().listen((event) {
-      if (press_check == true) {
-        pressure = event;
-        pmsg = '${pressure.toStringAsFixed(2)} mbar';
-        if (press_check == false) {
-          pmsg = 'Pressure not available';
-        }
-        //timer_press = Timer.periodic(Duration(seconds: 5), (Timer t) => insert_pressure_toDb());
-      } else {
-        pmsg = 'Pressure not available';
-      }
-    });
+          if (press_check == true) {
+            pressure = event;
+            pmsg = '${pressure.toStringAsFixed(2)} mbar';
+            if (press_check == false) {
+              pmsg = 'Pressure not available';
+            }
+            //timer_press = Timer.periodic(Duration(seconds: 5), (Timer t) => insert_pressure_toDb());
+          } else {
+            pmsg = 'Pressure not available';
+          }
+        });
 
     if (box.get('sensors_sr') != null) {
       srt = box.get('sensors_sr');
@@ -645,10 +626,10 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
         //sum_steps = box.get('today_steps') + numsteps;
         box.put('today_steps', box.get('today_steps') + 1);
         dist = double.parse(((box.get('today_steps') *
-                    box.get('steps_length')) /
-                1000)
+            box.get('steps_length')) /
+            1000)
             .toStringAsFixed(
-                3)); //(box.get('today_steps') * box.get('steps_length'))/ 1000;
+            3)); //(box.get('today_steps') * box.get('steps_length'))/ 1000;
       }
     });
 
@@ -1005,7 +986,7 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
   Future<void> check_pressure_availability() async {
     try {
       var available =
-          await StartScreen.press_channel.invokeMethod('isSensorAvailable');
+      await StartScreen.press_channel.invokeMethod('isSensorAvailable');
       press_check = available;
     } on PlatformException catch (e) {
       print(e);
@@ -1019,7 +1000,7 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
     } else {
       try {
         var available =
-            await StartScreen.prox_channel.invokeMethod('isSensorAvailable');
+        await StartScreen.prox_channel.invokeMethod('isSensorAvailable');
         prox_check = available;
       } on PlatformException catch (e) {
         print(e);
@@ -1034,7 +1015,7 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
     } else {
       try {
         var available =
-            await StartScreen.acc_channel.invokeMethod('isSensorAvailable');
+        await StartScreen.acc_channel.invokeMethod('isSensorAvailable');
         acc_check = available;
       } on PlatformException catch (e) {
         print(e);
@@ -1049,7 +1030,7 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
     } else {
       try {
         var available =
-            await StartScreen.gyro_channel.invokeMethod('isSensorAvailable');
+        await StartScreen.gyro_channel.invokeMethod('isSensorAvailable');
         gyro_check = available;
       } on PlatformException catch (e) {
         print(e);
@@ -1064,7 +1045,7 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
     } else {
       try {
         var available =
-            await StartScreen.magn_channel.invokeMethod('isSensorAvailable');
+        await StartScreen.magn_channel.invokeMethod('isSensorAvailable');
         magn_check = available;
       } on PlatformException catch (e) {
         print(e);
@@ -1174,8 +1155,8 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
 
     for (int i = 0; i < sensors.length; i++) {
       tmp = DateFormat.yMMMMEEEEd()
-              .add_Hms()
-              .format(DateTime.fromMillisecondsSinceEpoch(sensors[i]['date']));
+          .add_Hms()
+          .format(DateTime.fromMillisecondsSinceEpoch(sensors[i]['date']));
       arr[tmp] = sensors[i]['steps'];
     }
 
@@ -1205,7 +1186,7 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
   void generateData() {
     DateTime currentDate = DateTime.now();
     DateTime startOfWeek =
-        currentDate.subtract(Duration(days: currentDate.weekday - 1));
+    currentDate.subtract(Duration(days: currentDate.weekday - 1));
 // changed from 6 to 7
 
     List<ChartData> generatedData = [];
@@ -1344,9 +1325,9 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
                                     child: SfCartesianChart(
                                       primaryXAxis: const CategoryAxis(
                                         majorGridLines: MajorGridLines(
-                                    color: Colors.transparent),
+                                            color: Colors.transparent),
                                         labelIntersectAction:
-                                    AxisLabelIntersectAction.rotate45,
+                                        AxisLabelIntersectAction.rotate45,
                                         labelStyle: TextStyle(
                                           color: Colors.black,
                                           fontSize: 14,
@@ -1357,22 +1338,22 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
                                         maximum: maxYAxisValue.toDouble(),
                                         interval: maxYAxisValue / 10,
                                         majorGridLines: const MajorGridLines(
-                                    color: Colors
-                                        .transparent), // Hide minor tick lines
+                                            color: Colors
+                                                .transparent), // Hide minor tick lines
                                         labelIntersectAction: AxisLabelIntersectAction.rotate45, labelStyle: const TextStyle(color: Colors.black, fontSize: 10,
-                                                                        ),
-                                                                      ),
-                                                                      tooltipBehavior: _tooltip,
-                                                                      series: <ColumnSeries<ChartData, String>>[ // Change ChartSeries to ColumnSeries
-                                                                        ColumnSeries<ChartData, String>(
-                                                                          dataSource: data,
-                                                                          xValueMapper: (ChartData data, _) => data.x,
-                                                                          yValueMapper: (ChartData data, _) => data.y,
-                                                                          name: 'Steps',
-                                                                          color: Colors.cyan,
-                                                                        ),
-                                                                      ],
-                                                                    ))
+                                      ),
+                                      ),
+                                      tooltipBehavior: _tooltip,
+                                      series: <ColumnSeries<ChartData, String>>[ // Change ChartSeries to ColumnSeries
+                                        ColumnSeries<ChartData, String>(
+                                          dataSource: data,
+                                          xValueMapper: (ChartData data, _) => data.x,
+                                          yValueMapper: (ChartData data, _) => data.y,
+                                          name: 'Steps',
+                                          color: Colors.cyan,
+                                        ),
+                                      ],
+                                    ))
                               ],
                             ),
                             Container(
@@ -1387,283 +1368,283 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
                               ),
                               padding: const EdgeInsets.all(16),
                               child: SingleChildScrollView(
-                              child: Column(
-                                children: [
-                                  Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    // crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Column(
-                                        children: [
-                                          RichText(
-                                            text: const TextSpan(children: [
-                                              TextSpan(
-                                                  text: 'Today',
-                                                  style: TextStyle(
-                                                      fontWeight:
-                                                          FontWeight.bold,
-                                                      color: Colors.black,
-                                                      fontSize: 26)),
-                                            ]),
-                                          ),
-                                          const Positioned(
-                                            top: 16, // Adjust as necessary
-                                            right: 16, // Adjust as necessary
-                                            child: Row(
-                                              mainAxisSize: MainAxisSize.min, // To keep the row as big as its children
-                                              children: [
-                                                Padding(
-                                                  padding: EdgeInsets.only(right: 8.0), // Adjust the padding if needed
-                                                  child: Text(
-                                                    'Swipe for chart',
+                                child: Column(
+                                  children: [
+                                    Row(
+                                      mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                      // crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Column(
+                                          children: [
+                                            RichText(
+                                              text: const TextSpan(children: [
+                                                TextSpan(
+                                                    text: 'Today',
                                                     style: TextStyle(
-                                                      color: Colors.black,
-                                                      fontSize: 16,
-                                                    ),
-                                                  ),
-                                                ),
-                                                Icon(
-                                                  Icons.arrow_forward_ios,
-                                                  size: 24, // Arrow pointing right
-                                                ),
-                                              ],
+                                                        fontWeight:
+                                                        FontWeight.bold,
+                                                        color: Colors.black,
+                                                        fontSize: 26)),
+                                              ]),
                                             ),
-                                          )],
-                                      ),
-                                      Column(
-                                        children: [
-                                          IconButton(
-                                            onPressed: () => {
-                                              showDialog(
-                                                context: context,
-                                                builder: (context) =>
-                                                    StatefulBuilder(builder:
-                                                        (BuildContext context,
-                                                            StateSetter
-                                                                setState) {
-                                                  return AlertDialog(
-                                                    title: const Text(
-                                                        'Set your daily target\nor change your height',
-                                                        textAlign:
-                                                            TextAlign.justify),
-                                                    content: SizedBox(
-                                                      child: Column(
-                                                        mainAxisSize:
-                                                            MainAxisSize.min,
-                                                        children: [
-                                                          TextField(
-                                                            maxLength: 5,
-                                                            controller:
-                                                                stepController,
-                                                            keyboardType:
-                                                                TextInputType
-                                                                    .number,
-                                                            decoration: InputDecoration(
-                                                                labelText:
-                                                                    "Steps Target",
-                                                                counterText: '',
-                                                                hintText: box.get(
-                                                                            'target_steps') ==
-                                                                        null
-                                                                    ? ""
-                                                                    : "${box.get('target_steps')}"),
-                                                          ),
-                                                          TextField(
-                                                            maxLength: 3,
-                                                            controller:
-                                                                heightController,
-                                                            decoration: InputDecoration(
-                                                                labelText:
-                                                                    "Height in cm",
-                                                                errorText:
-                                                                    height_validate
-                                                                        ? null
-                                                                        : Height_Textfield_check(),
-                                                                counterText: '',
-                                                                hintText: box.get(
-                                                                            'height') ==
-                                                                        null
-                                                                    ? ""
-                                                                    : "${box.get('height')}"),
-                                                            keyboardType:
-                                                                TextInputType
-                                                                    .number,
-                                                            onChanged: (text) =>
-                                                                setState(() {
-                                                              height_validate =
-                                                                  height_error_msg();
-                                                            }),
-                                                          ),
-                                                        ],
+                                            const Positioned(
+                                              top: 16, // Adjust as necessary
+                                              right: 16, // Adjust as necessary
+                                              child: Row(
+                                                mainAxisSize: MainAxisSize.min, // To keep the row as big as its children
+                                                children: [
+                                                  Padding(
+                                                    padding: EdgeInsets.only(right: 8.0), // Adjust the padding if needed
+                                                    child: Text(
+                                                      'Swipe for chart',
+                                                      style: TextStyle(
+                                                        color: Colors.black,
+                                                        fontSize: 16,
                                                       ),
                                                     ),
-                                                    actions: [
-                                                      ElevatedButton(
-                                                          onPressed: () => {
-                                                                if (stepController.text.isEmpty == false &&
-                                                                    heightController
-                                                                            .text
-                                                                            .isEmpty ==
-                                                                        false &&
-                                                                    int.parse(heightController
-                                                                            .text) <=
-                                                                        250)
-                                                                  {
-                                                                    if (isSelected[
-                                                                            0] ==
-                                                                        true)
-                                                                      {
-                                                                        height =
-                                                                            int.parse(heightController.text),
-                                                                        steps_length =
-                                                                            (height * 0.415) /
-                                                                                100, // /100 to make it in meters
-                                                                        print(
-                                                                            'male')
-                                                                      }
-                                                                    else
-                                                                      {
-                                                                        height =
-                                                                            int.parse(heightController.text),
-                                                                        steps_length =
-                                                                            (height * 0.413) /
-                                                                                100, // /100 to make it in meters
-                                                                        print(
-                                                                            'female')
-                                                                      },
-                                                                    steps_target =
-                                                                        int.parse(
-                                                                            stepController.text),
-                                                                    user.steps_length =
-                                                                        steps_length,
-                                                                    user.height =
-                                                                        height,
-                                                                    user.target_steps =
-                                                                        steps_target,
-                                                                    box.put(
-                                                                        'height',
-                                                                        user.height),
-                                                                    box.put(
-                                                                        'steps_length',
-                                                                        user.steps_length),
-                                                                    box.put(
-                                                                        'target_steps',
-                                                                        user.target_steps),
-                                                                    // user?.save(),
-                                                                    stepController
-                                                                        .clear(),
-                                                                    heightController
-                                                                        .clear(),
-                                                                    Navigator.pop(
-                                                                        context,
-                                                                        steps_target),
-                                                                  }
-                                                              },
-                                                          child: const Text('Ok')),
-                                                    ],
-                                                    shape:
-                                                        RoundedRectangleBorder(
-                                                            borderRadius:
-                                                                BorderRadius
-                                                                    .circular(
-                                                                        10.0)),
-                                                  );
-                                                }),
-                                              )
-                                            },
-                                            icon: const FaIcon(
-                                                FontAwesomeIcons.bullseye),
-                                            color: isDarkMode == true
-                                                ? Colors.black
-                                                : Colors.black,
-                                          )
-                                        ],
-                                      )
-                                    ],
-                                  ),
-                                  SizedBox(height: size.height * 0.03),
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: <Widget>[
-                                      Center(
-                                        child: SizedBox(
-                                            height: 130,
-                                            width: 160,
-                                            child: Stack(
-                                              fit: StackFit.expand,
-                                              children: [
-                                                FittedBox(
-                                                  fit: BoxFit.fitWidth, // This ensures that the child scales down its width to fit into the parent
-                                                  child: LiquidCircularProgressIndicator(
-                                                    value: (steps == '0' && box.get('today_steps') != null)
-                                                        ? box.get('today_steps') / box.get('target_steps')
-                                                        : 0,
-                                                    backgroundColor: const Color(0xfff8f9f9),
-                                                    direction: Axis.vertical,
                                                   ),
-                                                ),
-                                                Center(
-                                                  child: RichText(
-                                                    text: TextSpan(children: [
-                                                      TextSpan(
-                                                          text: steps == '0' &&
-                                                                  box.get('today_steps') !=
-                                                                      null
-                                                              ? '${box.get('today_steps')}/${box.get('target_steps')}'
-                                                              : '$steps/${box.get('target_steps')}',
-                                                          style: const TextStyle(
-                                                            color: Colors.black,
-                                                            fontWeight:
-                                                                FontWeight.bold,
-                                                          )),
-                                                      WidgetSpan(
-                                                          child: RotatedBox(
-                                                              quarterTurns: 3,
-                                                              child: FaIcon(
-                                                                FontAwesomeIcons
-                                                                    .shoePrints,
-                                                                size: 12,
-                                                                color: isDarkMode ==
-                                                                        true
-                                                                    ? Colors
-                                                                        .black
-                                                                    : Colors
-                                                                        .black,
-                                                              )))
-                                                    ]),
+                                                  Icon(
+                                                    Icons.arrow_forward_ios,
+                                                    size: 24, // Arrow pointing right
                                                   ),
-                                                ),
-                                              ],
-                                            )),
-                                      ),
-                                    ],
-                                  ),
-                                  SizedBox(height: size.height * 0.03),
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Text(
-                                        '$dist',
-                                        style: const TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 14),
-                                      ),
-                                    ],
-                                  ),
-                                  const Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Text('Km by steps',
-                                          style: TextStyle(
+                                                ],
+                                              ),
+                                            )],
+                                        ),
+                                        Column(
+                                          children: [
+                                            IconButton(
+                                              onPressed: () => {
+                                                showDialog(
+                                                  context: context,
+                                                  builder: (context) =>
+                                                      StatefulBuilder(builder:
+                                                          (BuildContext context,
+                                                          StateSetter
+                                                          setState) {
+                                                        return AlertDialog(
+                                                          title: const Text(
+                                                              'Set your daily target\nor change your height',
+                                                              textAlign:
+                                                              TextAlign.justify),
+                                                          content: SizedBox(
+                                                            child: Column(
+                                                              mainAxisSize:
+                                                              MainAxisSize.min,
+                                                              children: [
+                                                                TextField(
+                                                                  maxLength: 5,
+                                                                  controller:
+                                                                  stepController,
+                                                                  keyboardType:
+                                                                  TextInputType
+                                                                      .number,
+                                                                  decoration: InputDecoration(
+                                                                      labelText:
+                                                                      "Steps Target",
+                                                                      counterText: '',
+                                                                      hintText: box.get(
+                                                                          'target_steps') ==
+                                                                          null
+                                                                          ? ""
+                                                                          : "${box.get('target_steps')}"),
+                                                                ),
+                                                                TextField(
+                                                                  maxLength: 3,
+                                                                  controller:
+                                                                  heightController,
+                                                                  decoration: InputDecoration(
+                                                                      labelText:
+                                                                      "Height in cm",
+                                                                      errorText:
+                                                                      height_validate
+                                                                          ? null
+                                                                          : Height_Textfield_check(),
+                                                                      counterText: '',
+                                                                      hintText: box.get(
+                                                                          'height') ==
+                                                                          null
+                                                                          ? ""
+                                                                          : "${box.get('height')}"),
+                                                                  keyboardType:
+                                                                  TextInputType
+                                                                      .number,
+                                                                  onChanged: (text) =>
+                                                                      setState(() {
+                                                                        height_validate =
+                                                                            height_error_msg();
+                                                                      }),
+                                                                ),
+                                                              ],
+                                                            ),
+                                                          ),
+                                                          actions: [
+                                                            ElevatedButton(
+                                                                onPressed: () => {
+                                                                  if (stepController.text.isEmpty == false &&
+                                                                      heightController
+                                                                          .text
+                                                                          .isEmpty ==
+                                                                          false &&
+                                                                      int.parse(heightController
+                                                                          .text) <=
+                                                                          250)
+                                                                    {
+                                                                      if (isSelected[
+                                                                      0] ==
+                                                                          true)
+                                                                        {
+                                                                          height =
+                                                                              int.parse(heightController.text),
+                                                                          steps_length =
+                                                                              (height * 0.415) /
+                                                                                  100, // /100 to make it in meters
+                                                                          print(
+                                                                              'male')
+                                                                        }
+                                                                      else
+                                                                        {
+                                                                          height =
+                                                                              int.parse(heightController.text),
+                                                                          steps_length =
+                                                                              (height * 0.413) /
+                                                                                  100, // /100 to make it in meters
+                                                                          print(
+                                                                              'female')
+                                                                        },
+                                                                      steps_target =
+                                                                          int.parse(
+                                                                              stepController.text),
+                                                                      user.steps_length =
+                                                                          steps_length,
+                                                                      user.height =
+                                                                          height,
+                                                                      user.target_steps =
+                                                                          steps_target,
+                                                                      box.put(
+                                                                          'height',
+                                                                          user.height),
+                                                                      box.put(
+                                                                          'steps_length',
+                                                                          user.steps_length),
+                                                                      box.put(
+                                                                          'target_steps',
+                                                                          user.target_steps),
+                                                                      // user?.save(),
+                                                                      stepController
+                                                                          .clear(),
+                                                                      heightController
+                                                                          .clear(),
+                                                                      Navigator.pop(
+                                                                          context,
+                                                                          steps_target),
+                                                                    }
+                                                                },
+                                                                child: const Text('Ok')),
+                                                          ],
+                                                          shape:
+                                                          RoundedRectangleBorder(
+                                                              borderRadius:
+                                                              BorderRadius
+                                                                  .circular(
+                                                                  10.0)),
+                                                        );
+                                                      }),
+                                                )
+                                              },
+                                              icon: const FaIcon(
+                                                  FontAwesomeIcons.bullseye),
+                                              color: isDarkMode == true
+                                                  ? Colors.black
+                                                  : Colors.black,
+                                            )
+                                          ],
+                                        )
+                                      ],
+                                    ),
+                                    SizedBox(height: size.height * 0.03),
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: <Widget>[
+                                        Center(
+                                          child: SizedBox(
+                                              height: 130,
+                                              width: 160,
+                                              child: Stack(
+                                                fit: StackFit.expand,
+                                                children: [
+                                                  FittedBox(
+                                                    fit: BoxFit.fitWidth, // This ensures that the child scales down its width to fit into the parent
+                                                    child: LiquidCircularProgressIndicator(
+                                                      value: (steps == '0' && box.get('today_steps') != null)
+                                                          ? box.get('today_steps') / box.get('target_steps')
+                                                          : 0,
+                                                      backgroundColor: const Color(0xfff8f9f9),
+                                                      direction: Axis.vertical,
+                                                    ),
+                                                  ),
+                                                  Center(
+                                                    child: RichText(
+                                                      text: TextSpan(children: [
+                                                        TextSpan(
+                                                            text: steps == '0' &&
+                                                                box.get('today_steps') !=
+                                                                    null
+                                                                ? '${box.get('today_steps')}/${box.get('target_steps')}'
+                                                                : '$steps/${box.get('target_steps')}',
+                                                            style: const TextStyle(
+                                                              color: Colors.black,
+                                                              fontWeight:
+                                                              FontWeight.bold,
+                                                            )),
+                                                        WidgetSpan(
+                                                            child: RotatedBox(
+                                                                quarterTurns: 3,
+                                                                child: FaIcon(
+                                                                  FontAwesomeIcons
+                                                                      .shoePrints,
+                                                                  size: 12,
+                                                                  color: isDarkMode ==
+                                                                      true
+                                                                      ? Colors
+                                                                      .black
+                                                                      : Colors
+                                                                      .black,
+                                                                )))
+                                                      ]),
+                                                    ),
+                                                  ),
+                                                ],
+                                              )),
+                                        ),
+                                      ],
+                                    ),
+                                    SizedBox(height: size.height * 0.03),
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Text(
+                                          '$dist',
+                                          style: const TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 14),
+                                        ),
+                                      ],
+                                    ),
+                                    const Row(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Text('Km by steps',
+                                            style: TextStyle(
                                               //fontWeight: FontWeight.bold,
-                                              color: Colors.black,
-                                              fontSize: 14))
-                                    ],
-                                  ),
-                                ],
+                                                color: Colors.black,
+                                                fontSize: 14))
+                                      ],
+                                    ),
+                                  ],
+                                ),
                               ),
-                            ),
                             )],
                         ),
                       ),
@@ -1766,12 +1747,12 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
                                 maximumSize: Size(MediaQuery.of(context).size.width * 0.4, 50),
                               ),
                               onPressed: () => {
-                                    Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                            builder: (context) =>
-                                                const sens.Sensors()))
-                                  },
+                                Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                        builder: (context) =>
+                                        const sens.Sensors()))
+                              },
                               child: const Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
@@ -1798,11 +1779,11 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
                               maximumSize: Size(MediaQuery.of(context).size.width * 0.4, 50),
                             ),
                             onPressed: () => {
-                                  Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                          builder: (context) => const Settings()))
-                                },
+                              Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                      builder: (context) => const Settings()))
+                            },
                             child: const Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
@@ -1843,11 +1824,11 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
                                 builder: (context) => AlertDialog(
                                   title: const Text('Logout'),
                                   content:
-                                      const Text('Are you sure you want to exit?'),
+                                  const Text('Are you sure you want to exit?'),
                                   actions: [
                                     ElevatedButton(
                                         onPressed: () =>
-                                            {Navigator.pop(context)},
+                                        {Navigator.pop(context)},
                                         child: const Text('No')),
                                     ElevatedButton(
                                         onPressed: () async {
@@ -1863,13 +1844,13 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
                                               context,
                                               MaterialPageRoute(
                                                   builder: (context) =>
-                                                      const Login()));
+                                                  const Login()));
                                         },
                                         child: const Text('Yes'))
                                   ],
                                   shape: RoundedRectangleBorder(
                                       borderRadius:
-                                          BorderRadius.circular(10.0)),
+                                      BorderRadius.circular(10.0)),
                                 ),
                                 barrierDismissible: false,
                               ),
@@ -1927,79 +1908,79 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
                 context: context,
                 builder: (context) => StatefulBuilder(
                     builder: (BuildContext context, StateSetter setState) {
-                  return AlertDialog(
-                    title: const Text(
-                        'Set your daily steps target, your gender and your height',
-                        textAlign: TextAlign.justify),
-                    content: SizedBox(
-                      child: SingleChildScrollView(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Text(
-                              'You can change the daily target of steps anytime or the height by pressing the settings icon on top right corner.',
-                              style: TextStyle(fontSize: 14),
-                              textAlign: TextAlign.justify,
-                            ),
-                            const SizedBox(height: 16),
-                            TextField(
-                              maxLength: 5,
-                              controller: stepController,
-                              decoration: const InputDecoration(
-                                  labelText: "Steps Target", counterText: ''),
-                              keyboardType: TextInputType.number,
-                            ),
-                            const SizedBox(height: 16),
-                            TextField(
-                              maxLength: 3,
-                              controller: heightController,
-                              decoration: InputDecoration(
-                                  labelText: "Height in cm",
-                                  errorText: height_validate
-                                      ? null
-                                      : Height_Textfield_check(),
-                                  counterText: ''),
-                              keyboardType: TextInputType.number,
-                              onChanged: (text) => setState(() {
-                                height_validate = height_error_msg();
-                              }),
-                            ),
-                            const SizedBox(height: 16),
-                            ToggleButtons(
-                              isSelected: isSelected,
-                              borderRadius: BorderRadius.circular(30),
-                              color: Colors.black,
-                              children: const <Widget>[Text('Male'), Text('Female')],
-                              onPressed: (int index) {
-                                setState(() {
-                                  //final box = Boxes.getUser();
-                                  //box.add(user);
-                                  for (int i = 0; i < 2; i++) {
-                                    if (i == index) {
-                                      isSelected[i] = true;
-                                      user.gender = 'male';
-                                      box.put('gender', user.gender);
-                                      print(box.get('gender'));
-                                    } else {
-                                      isSelected[i] = false;
-                                      user.gender = 'female';
-                                      box.put('gender', user.gender);
-                                      print(box.get('gender'));
-                                    }
-                                    //user.save();
+                      return AlertDialog(
+                        title: const Text(
+                            'Set your daily steps target, your gender and your height',
+                            textAlign: TextAlign.justify),
+                        content: SizedBox(
+                          child: SingleChildScrollView(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Text(
+                                  'You can change the daily target of steps anytime or the height by pressing the settings icon on top right corner.',
+                                  style: TextStyle(fontSize: 14),
+                                  textAlign: TextAlign.justify,
+                                ),
+                                const SizedBox(height: 16),
+                                TextField(
+                                  maxLength: 5,
+                                  controller: stepController,
+                                  decoration: const InputDecoration(
+                                      labelText: "Steps Target", counterText: ''),
+                                  keyboardType: TextInputType.number,
+                                ),
+                                const SizedBox(height: 16),
+                                TextField(
+                                  maxLength: 3,
+                                  controller: heightController,
+                                  decoration: InputDecoration(
+                                      labelText: "Height in cm",
+                                      errorText: height_validate
+                                          ? null
+                                          : Height_Textfield_check(),
+                                      counterText: ''),
+                                  keyboardType: TextInputType.number,
+                                  onChanged: (text) => setState(() {
+                                    height_validate = height_error_msg();
+                                  }),
+                                ),
+                                const SizedBox(height: 16),
+                                ToggleButtons(
+                                  isSelected: isSelected,
+                                  borderRadius: BorderRadius.circular(30),
+                                  color: Colors.black,
+                                  children: const <Widget>[Text('Male'), Text('Female')],
+                                  onPressed: (int index) {
+                                    setState(() {
+                                      //final box = Boxes.getUser();
+                                      //box.add(user);
+                                      for (int i = 0; i < 2; i++) {
+                                        if (i == index) {
+                                          isSelected[i] = true;
+                                          user.gender = 'male';
+                                          box.put('gender', user.gender);
+                                          print(box.get('gender'));
+                                        } else {
+                                          isSelected[i] = false;
+                                          user.gender = 'female';
+                                          box.put('gender', user.gender);
+                                          print(box.get('gender'));
+                                        }
+                                        //user.save();
 
-                                    //user.save();
-                                  }
-                                });
-                              },
+                                        //user.save();
+                                      }
+                                    });
+                                  },
+                                ),
+                              ],
                             ),
-                          ],
+                          ),
                         ),
-                      ),
-                    ),
-                    actions: [
-                      ElevatedButton(
-                          onPressed: () => {
+                        actions: [
+                          ElevatedButton(
+                              onPressed: () => {
                                 if (stepController.text.isEmpty == false &&
                                     heightController.text.isEmpty == false &&
                                     int.parse(heightController.text) <= 250)
@@ -2034,12 +2015,12 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
                                     Navigator.pop(context, steps_target),
                                   }
                               },
-                          child: const Text('Ok')),
-                    ],
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10.0)),
-                  );
-                }),
+                              child: const Text('Ok')),
+                        ],
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10.0)),
+                      );
+                    }),
                 barrierDismissible: false,
               );
             },
