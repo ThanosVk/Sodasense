@@ -1393,22 +1393,22 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
                                               right: 16, // Adjust as necessary
                                               child: Row(
                                                 mainAxisSize: MainAxisSize.min, // To keep the row as big as its children
-                                                children: [
-                                                  Padding(
-                                                    padding: EdgeInsets.only(right: 8.0), // Adjust the padding if needed
-                                                    child: Text(
-                                                      'Swipe for chart',
-                                                      style: TextStyle(
-                                                        color: Colors.black,
-                                                        fontSize: 16,
-                                                      ),
-                                                    ),
-                                                  ),
-                                                  Icon(
-                                                    Icons.arrow_forward_ios,
-                                                    size: 24, // Arrow pointing right
-                                                  ),
-                                                ],
+                                                // children: [
+                                                //   Padding(
+                                                //     padding: EdgeInsets.only(right: 8.0), // Adjust the padding if needed
+                                                //     child: Text(
+                                                //       'Swipe for chart',
+                                                //       style: TextStyle(
+                                                //         color: Colors.black,
+                                                //         fontSize: 16,
+                                                //       ),
+                                                //     ),
+                                                //   ),
+                                                //   Icon(
+                                                //     Icons.arrow_forward_ios,
+                                                //     size: 24, // Arrow pointing right
+                                                //   ),
+                                                // ],
                                               ),
                                             )],
                                         ),
