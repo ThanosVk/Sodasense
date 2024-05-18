@@ -1,3 +1,4 @@
+import 'package:auto_size_text/auto_size_text.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
@@ -39,16 +40,13 @@ class Navigation extends StatefulWidget {
 }
 
 class NavigationState extends State<Navigation> {
-  bool hasPermissions = false,
-      serviceEnabled =
-          false; //hasPermissions if the gps permissions are given, serviceEnabled if the gps is enabled
-  double lat = 0,
-      lng = 0,
-      coor_points =
-          1000; //lat for getting the latitude, lng for getting the longitude, coor_points for setting the coordinate points on slider
-  double speed = 0,
-      distance =
-          0; //speed for getting the speed, distance for calculating the distance of the route
+  bool hasPermissions = false, serviceEnabled = false; //hasPermissions if the gps permissions are given, serviceEnabled if the gps is enabled
+  double lat = 0, lng = 0, coor_points = 1000; //lat for getting the latitude, lng for getting the longitude, coor_points for setting the coordinate points on slider
+  double speed = 0, distance = 0; //speed for getting the speed, distance for calculating the distance of the route
+  loc.Location location = loc.Location();
+  var box = Hive.box('user');
+  //panelController for managing what happens inside the SlidingUpPanel
+  final PanelController panelController = PanelController();
 
   geo.Position? currentPosition;
 
@@ -65,8 +63,6 @@ class NavigationState extends State<Navigation> {
   loc.LocationData? currentLocation;
   loc.LocationData? destinationLocation;
 
-  loc.Location location = loc.Location();
-
   //Date for using date in the database
   int date = 0;
 
@@ -79,9 +75,6 @@ class NavigationState extends State<Navigation> {
 
   Timer? timer; //for setting the timer
 
-  var box = Hive.box('user');
-
-
   String date_end = '';
   int sl_date = 0, prsd_btn_first = 0, prsd_btn_second = 0;
 
@@ -89,20 +82,29 @@ class NavigationState extends State<Navigation> {
 
   List<List> faw = [];
 
-  //panelController for managing what happens inside the SlidingUpPanel
-  final PanelController panelController = PanelController();
-
   static final customCacheManager = CacheManager(
     Config('customCacheKey',
         stalePeriod: const Duration(days: 30), maxNrOfCacheObjects: 200),
   );
 
+  Map<String, String> determineActivity(double speed) {
+    if (speed < 1) {
+      return {"activity": "Standing", "image": "assets/standing.png"};
+    } else if (speed < 5) {
+      return {"activity": "Walking", "image": "assets/walking.png"};
+    } else if (speed < 15) {
+      return {"activity": "Running", "image": "assets/running.png"};
+    } else if (speed < 25) {
+      return {"activity": "Cycling", "image": "assets/cycling.png"};
+    } else {
+      return {"activity": "Driving", "image": "assets/driving.png"};
+    }
+  }
+
   @override
   void initState() {
     super.initState();
-
     fetchPermissionStatus();
-
     SqlDatabase.instance.database;
 
     // setState(() {
@@ -122,29 +124,43 @@ class NavigationState extends State<Navigation> {
         follow_on_location_update = AlignOnUpdate.always;
         follow_current_location_StreamController = StreamController<double>();
 
+        //New Location Listener
         location.onLocationChanged.listen((loc.LocationData cLoc) {
-          currentLocation = cLoc;
-
+          if (!mounted) return;
           setState(() {
-            setpoint(cLoc.latitude, cLoc.longitude);
-
-            speed = cLoc.speed! * 3.6;
-            //polylineCoordinates.add(LatLng(lat,lng));
-            //faw.add(['$date,$lat,$lng,false']);
-            //box.put('coordinates',faw);
-            //if(polylineCoordinates[0] == LatLng(0,0)){
-            //  polylineCoordinates.removeAt(0);
-            //}
-
-            //polylines[date] = polylineCoordinates;
-            //polylines['ew'] = polylineCoordinates;
-            //print(polylineCoordinates);
-            // print(polylineCoordinates.length);
+            lat = cLoc.latitude ?? 0.0;
+            lng = cLoc.longitude ?? 0.0;
+            speed = (cLoc.speed ?? 0) * 3.6; // Correctly calculate the speed
+            // Update the database and UI only if necessary
+            if (speed > 0) {
+              insert_toDb();
+            }
           });
-
-          insert_toDb();
-          //getCoordinates();
         });
+
+        // location.onLocationChanged.listen((loc.LocationData cLoc) {
+        //   currentLocation = cLoc;
+        //
+        //   setState(() {
+        //     setpoint(cLoc.latitude, cLoc.longitude);
+        //
+        //     speed = cLoc.speed! * 3.6;
+        //     //polylineCoordinates.add(LatLng(lat,lng));
+        //     //faw.add(['$date,$lat,$lng,false']);
+        //     //box.put('coordinates',faw);
+        //     //if(polylineCoordinates[0] == LatLng(0,0)){
+        //     //  polylineCoordinates.removeAt(0);
+        //     //}
+        //
+        //     //polylines[date] = polylineCoordinates;
+        //     //polylines['ew'] = polylineCoordinates;
+        //     //print(polylineCoordinates);
+        //     // print(polylineCoordinates.length);
+        //   });
+        //
+        //   insert_toDb();
+        //   //getCoordinates();
+        // });
         //getCoordinates();
       });
     }
@@ -706,13 +722,10 @@ class NavigationState extends State<Navigation> {
                   controller: panelController,
                   minHeight: size.height * 0.06,
                   maxHeight: size.height * 0.5,
-                  borderRadius:
-                      const BorderRadius.vertical(top: Radius.circular(18.0)),
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(18.0)),
                   parallaxEnabled: true,
                   parallaxOffset: 0.5,
-                  color: themeProvider.isDarkMode == true
-                      ? Colors.grey.shade900
-                      : Colors.white,
+                  color: themeProvider.isDarkMode == true ? Colors.grey.shade900 : Colors.white,
                   panel: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 24),
                     child: Column(
@@ -733,36 +746,50 @@ class NavigationState extends State<Navigation> {
                               ? panelController.close()
                               : panelController.open(),
                         ),
-                        SizedBox(height: size.height * 0.07),
+                        SizedBox(height: size.height * 0.03),
                         Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Column(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceEvenly,
+                                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                                   children: [
-                                    const Text('Distance traveled in Km',
-                                        style: TextStyle(
-                                            fontSize: 16.0,
-                                            fontWeight: FontWeight.bold)),
-                                    Text(distance.toStringAsFixed(2),
+                                    const AutoSizeText(
+                                        'Distance Travelled in Km',
+                                        minFontSize: 10,
+                                        maxFontSize: 18,
+                                        style: TextStyle(fontWeight: FontWeight.bold)
+                                    ),
+                                    Text('${distance.toStringAsFixed(2)} Km',
                                         style: const TextStyle(fontSize: 16.0))
-                                  ]),
+                                  ]
+                              ),
                               Column(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceEvenly,
+                                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                                   children: [
-                                    const Text('Moving speed in Km/h',
-                                        style: TextStyle(
-                                            fontSize: 16.0,
-                                            fontWeight: FontWeight.bold)),
+                                    const AutoSizeText(
+                                        'Moving Speed in Km/h',
+                                        minFontSize: 10,
+                                        maxFontSize: 18,
+                                        style: TextStyle(fontWeight: FontWeight.bold)
+                                    ),
                                     Text(speed.toStringAsFixed(1),
                                         style: const TextStyle(fontSize: 16.0))
-                                  ])
-                            ]),
+                                  ]
+                              )
+                            ]
+                        ),
+                    SizedBox(height: size.height * 0.03),
+                    Row(
+                      children: [
+                        Expanded(
+                            child: Text("Activity: ${determineActivity(speed)['activity']}", style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold))
+                        ),
+                        const SizedBox(width: 10),  // Space between text and image
+                        Image.asset(determineActivity(speed)['image']!, width: 50)  // Display the image
                       ],
                     ),
-                  ),
+                  ]),
+                )
                 )
               ],
             );
