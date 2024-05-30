@@ -186,14 +186,14 @@ class _SettingsState extends State<Settings> {
     }
   }
 
-  //Function to upload database files
+  //Function to upload database files with progress indicator
   Future<void> uploadDatabase() async {
     FilePickerResult? result = await FilePicker.platform.pickFiles();
 
     if (result != null) {
       File file = File(result.files.single.path!);
 
-      // Perform validation checks here
+      // Perform validation checks
       bool isValid = await isValidDatabaseFile(file);
       if (!isValid) return; // If not valid, return early
 
@@ -201,47 +201,65 @@ class _SettingsState extends State<Settings> {
       String existingDbPath = '$dbPath/db.db';
 
       try {
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (BuildContext context) {
+            return Center(child: CircularProgressIndicator());
+          },
+        );
+
         final newDb = await openDatabase(file.path);
         final existingDb = await openDatabase(existingDbPath);
+        bool hasNewEntries = false; // Flag to check if new entries were added
 
-        // List of tables to check and merge
-        const tables = [
-          'coordinates', 'altitude', 'pressure', 'acceleration',
-          'gyroscope', 'magnetometer', 'proximity', 'daily_steps', 'sensors'
-        ];
+        await existingDb.transaction((txn) async {
+          const tables = [
+            'coordinates', 'altitude', 'pressure', 'acceleration',
+            'gyroscope', 'magnetometer', 'proximity', 'daily_steps', 'sensors'
+          ];
 
-        for (String table in tables) {
-          // Get all entries from the new database for a table
-          List<Map> newEntries = await newDb.query(table);
+          for (String table in tables) {
+            List<Map> newEntries = await newDb.query(table);
 
-          // Iterate through each entry to check for duplicates
-          for (var newEntry in newEntries) {
-            // Cast Map<dynamic, dynamic> to Map<String, Object?>
-            Map<String, Object?> castedEntry = newEntry.map((key, value) => MapEntry(key.toString(), value));
+            for (var newEntry in newEntries) {
+              Map<String, Object?> castedEntry = newEntry.map((key, value) => MapEntry(key.toString(), value));
 
-            // Assuming 'id' is the primary key
-            var exists = await existingDb.query(table,
-                where: 'id = ?', whereArgs: [castedEntry['id']]);
+              // Check for existing entry based on a primary key or unique identifier
+              var exists = await txn.query(table,
+                  where: 'id = ?', whereArgs: [castedEntry['id']]);
 
-            if (exists.isEmpty) {
-              // If the entry does not exist in the existing database, insert it
-              await existingDb.insert(table, castedEntry);
+              if (exists.isEmpty) {
+                // If the entry does not exist in the existing database, insert it
+                await txn.insert(table, castedEntry);
+                hasNewEntries = true; // Set flag to true if new entry is added
+              } else {
+                // Optional, handle the duplicate case (e.g., log it, update it, skip it)
+                print('Duplicate entry found for id: ${castedEntry['id']}');
+              }
             }
-            // If the entry exists, it is skipped
           }
-        }
+        });
 
         await newDb.close();
         await existingDb.close();
 
-        // Notify the user of successful merge
-        Fluttertoast.showToast(
-          msg: 'Database updated with new entries',
-          toastLength: Toast.LENGTH_SHORT,
-          gravity: ToastGravity.BOTTOM,
-        );
+        Navigator.pop(context); // Close the progress dialog
+        if (hasNewEntries) {
+          Fluttertoast.showToast(
+            msg: 'Database updated with new entries',
+            toastLength: Toast.LENGTH_SHORT,
+            gravity: ToastGravity.BOTTOM,
+          );
+        } else {
+          Fluttertoast.showToast(
+            msg: 'No new entries found. Database remains unchanged.',
+            toastLength: Toast.LENGTH_SHORT,
+            gravity: ToastGravity.BOTTOM,
+          );
+        }
       } catch (e) {
-        // If an error occurs during the database operation, notify the user
+        Navigator.pop(context); // Close the progress dialog
         Fluttertoast.showToast(
           msg: 'Error updating database: $e',
           toastLength: Toast.LENGTH_LONG,
@@ -249,7 +267,6 @@ class _SettingsState extends State<Settings> {
         );
       }
     } else {
-      // If no file was selected, notify the user
       Fluttertoast.showToast(
         msg: 'No file selected',
         toastLength: Toast.LENGTH_SHORT,
@@ -606,7 +623,7 @@ class _SettingsState extends State<Settings> {
               ),
               child: ListTile(
                 title: const Text('Upload DB from downloads'),
-                onTap: uploadDatabase, // Use the uploadDatabase function here
+                onTap: uploadDatabase,
               ),
             ),
           ],
