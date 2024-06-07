@@ -20,6 +20,8 @@ import 'package:hive/hive.dart';
 import 'package:thesis/SqlDatabase.dart';
 import 'package:sliding_up_panel/sliding_up_panel.dart';
 import 'package:thesis/Theme_provider.dart';
+import 'dart:math';
+import 'package:flutter_activity_recognition/flutter_activity_recognition.dart';
 
 class CachedTileProvider extends TileProvider {
   CachedTileProvider({customCacheManager});
@@ -56,8 +58,7 @@ class NavigationState extends State<Navigation> {
   Completer<MapController> controllerMap = Completer();
   MapController? newMapController;
   // Set<Polyline> polylines = Set<Polyline>();
-  List<LatLng> polylineCoordinates =
-      []; //for saving the coordinates temporary from db to be displayed on map
+  List<LatLng> polylineCoordinates = []; //for saving the coordinates temporary from db to be displayed on map
   // Polyline polylinePoints = new PolylinePoints();
 
   loc.LocationData? currentLocation;
@@ -82,22 +83,49 @@ class NavigationState extends State<Navigation> {
 
   List<List> faw = [];
 
+  late StreamSubscription<Activity> _activityStreamSubscription;
+  final activityRecognition = FlutterActivityRecognition.instance;
+  String currentActivity = 'UNKNOWN';
+
   static final customCacheManager = CacheManager(
-    Config('customCacheKey',
-        stalePeriod: const Duration(days: 30), maxNrOfCacheObjects: 200),
+    Config('customCacheKey', stalePeriod: const Duration(days: 30), maxNrOfCacheObjects: 200),
   );
 
-  Map<String, String> determineActivity(double speed) {
-    if (speed < 1) {
-      return {"activity": "Standing", "image": "assets/standing.png"};
-    } else if (speed < 5) {
-      return {"activity": "Walking", "image": "assets/walking.png"};
-    } else if (speed < 15) {
-      return {"activity": "Running", "image": "assets/running.png"};
-    } else if (speed < 25) {
-      return {"activity": "Cycling", "image": "assets/cycling.png"};
-    } else {
-      return {"activity": "Driving", "image": "assets/driving.png"};
+  // Helper method to format actibity type
+  String formatActivityType(String activityType) {
+    switch (activityType) {
+      case 'IN_VEHICLE':
+        return 'In Vehicle';
+      case 'ON_BICYCLE':
+        return 'On Bicycle';
+      case 'RUNNING':
+        return 'Running';
+      case 'STILL':
+        return 'Still';
+      case 'WALKING':
+        return 'Walking';
+      case 'UNKNOWN':
+      default:
+        return 'Unknown';
+    }
+  }
+
+  // Method for images path
+  String getActivityImage(String activityType) {
+    switch (activityType) {
+      case 'In Vehicle':
+        return 'assets/driving.png';
+      case 'On Bicycle':
+        return 'assets/cycling.png';
+      case 'Running':
+        return 'assets/running.png';
+      case 'Still':
+        return 'assets/standing.png';
+      case 'Walking':
+        return 'assets/walking.png';
+      case 'Unknown':
+      default:
+        return 'assets/unknown.png';
     }
   }
 
@@ -106,6 +134,7 @@ class NavigationState extends State<Navigation> {
     super.initState();
     fetchPermissionStatus();
     SqlDatabase.instance.database;
+    startActivityRecognition();
 
     // setState(() {
     //   getData();
@@ -173,11 +202,44 @@ class NavigationState extends State<Navigation> {
     //timer = Timer.periodic(Duration(seconds: 5), (Timer t) => print(date));
   }
 
+  Future<void> startActivityRecognition() async {
+    final isGranted = await isPermissionGranted();
+    if (isGranted) {
+      _activityStreamSubscription = activityRecognition.activityStream
+          .handleError((error) {
+        // Handle error here
+        print('Activity stream error: $error');
+      }).listen((activity) {
+        setState(() {
+          currentActivity = formatActivityType(activity.type.toString().split('.').last);
+        });
+        // Perform actions based on the detected activity. In this case, log the current activity
+        print('Current activity: $currentActivity');
+      });
+    }
+  }
+
+  Future<bool> isPermissionGranted() async {
+    var reqResult = await activityRecognition.checkPermission();
+    if (reqResult == PermissionRequestResult.PERMANENTLY_DENIED) {
+      print('Permission is permanently denied.');
+      return false;
+    } else if (reqResult == PermissionRequestResult.DENIED) {
+      reqResult = await activityRecognition.requestPermission();
+      if (reqResult != PermissionRequestResult.GRANTED) {
+        print('Permission is denied.');
+        return false;
+      }
+    }
+    return true;
+  }
+
   @override
   void dispose() {
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     follow_current_location_StreamController.close();
     //timer?.cancel();
+    _activityStreamSubscription.cancel();
     super.dispose();
   }
 
@@ -222,24 +284,8 @@ class NavigationState extends State<Navigation> {
     print('$lat,$lng');
   }
 
-  /* Test to check if needed or not in the future
-   getP() {
-    for (var key in polylines.keys) {
-      TaggedPolyline(
-        tag: 'My Polyline',
-        // An optional tag to distinguish polylines in callback
-        points: polylines[key],
-        color: Colors.red,
-        strokeWidth: 9.0,
-      );
-    }
-  } */
-
   //getCoordinates for getting the coordinates points from the first date picker
-  getCoordinates(
-    int x,
-    int dt_st,
-  ) async {
+  getCoordinates(int x, int dt_st,) async {
     List<Map> lista = await SqlDatabase.instance.select_coor_first(x, dt_st);
     //int ff = await SqlDatabase.instance.select_coor();
     polylineCoordinates = [];
@@ -250,10 +296,7 @@ class NavigationState extends State<Navigation> {
   }
 
   //getCoordinatesSecond for getting the cordinates points from the second date picker
-  getCoordinatesSecond(
-    int x,
-    int dt_st,
-  ) async {
+  getCoordinatesSecond(int x, int dt_st,) async {
     List<Map> lista = await SqlDatabase.instance.select_coor_second(x, dt_st);
     //int ff = await SqlDatabase.instance.select_coor();
     polylineCoordinates = [];
@@ -283,9 +326,9 @@ class NavigationState extends State<Navigation> {
     if (newDate == null) return;
 
     setState(() => {
-          selected_date = newDate,
-          sl_date = selected_date!.millisecondsSinceEpoch
-        });
+      selected_date = newDate,
+      sl_date = selected_date!.millisecondsSinceEpoch
+    });
     print('I imerominia pou dialexes einai $sl_date');
   }
 
@@ -301,9 +344,9 @@ class NavigationState extends State<Navigation> {
     if (newDate == null) return;
 
     setState(() => {
-          selected_date_second = newDate,
-          sl_date = selected_date_second!.millisecondsSinceEpoch
-        });
+      selected_date_second = newDate,
+      sl_date = selected_date_second!.millisecondsSinceEpoch
+    });
     print('I imerominia pou dialexes einai $sl_date');
   }
 
@@ -347,7 +390,6 @@ class NavigationState extends State<Navigation> {
   @override
   Widget build(BuildContext context) {
     Size size = MediaQuery.of(context).size;
-
     final themeProvider = Provider.of<ThemeProvider>(context);
 
     return Scaffold(
@@ -355,7 +397,7 @@ class NavigationState extends State<Navigation> {
         appBar: AppBar(
             title: const Text("Route"),
             systemOverlayStyle:
-                const SystemUiOverlayStyle(statusBarColor: Colors.cyan)),
+            const SystemUiOverlayStyle(statusBarColor: Colors.cyan)),
         body: SafeArea(child: Builder(builder: (context) {
           if (hasPermissions) {
             // location.changeSettings(accuracy: loc.LocationAccuracy.navigation);
@@ -395,13 +437,13 @@ class NavigationState extends State<Navigation> {
                   children: [
                     TileLayer(
                       //options: TileLayerOptions(
-                          urlTemplate:
-                              "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-                          subdomains: const ['a', 'b', 'c'],
-                          maxZoom: 19,
-                          tileProvider: CachedTileProvider(
-                            customCacheManager: customCacheManager,
-                          ),
+                      urlTemplate:
+                      "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+                      subdomains: const ['a', 'b', 'c'],
+                      maxZoom: 19,
+                      tileProvider: CachedTileProvider(
+                        customCacheManager: customCacheManager,
+                      ),
                     ),
                     CurrentLocationLayer(
                       style: LocationMarkerStyle(
@@ -436,7 +478,7 @@ class NavigationState extends State<Navigation> {
                           ),
                         ]
                             : [] // If polylineCoordinates is empty, don't create any polylines
-                      ),
+                    ),
                     MarkerLayer(
                       markers: polylineCoordinates.isNotEmpty
                           ? [
@@ -470,7 +512,7 @@ class NavigationState extends State<Navigation> {
                       Clipboard.setData(ClipboardData(text: "$lat,$lng"));
                       Fluttertoast.showToast(
                           msg:
-                              'The coordinates are: X:$lat, Y:$lng and copied to clipboard',
+                          'The coordinates are: X:$lat, Y:$lng and copied to clipboard',
                           toastLength: Toast.LENGTH_LONG,
                           gravity: ToastGravity.BOTTOM);
                     },
@@ -528,7 +570,7 @@ class NavigationState extends State<Navigation> {
                                                   .toString(),
                                               onChanged: (coor_points) =>
                                                   setState(() => this.coor_points =
-                                                            coor_points,),
+                                                      coor_points,),
                                             ),
                                           ),
                                           const Text('5000')
@@ -544,7 +586,7 @@ class NavigationState extends State<Navigation> {
                                           child: selected_date == null
                                               ? const Text('Select Date')
                                               : Text(
-                                                  '${selected_date?.day}/${selected_date?.month}/${selected_date?.year}')),
+                                              '${selected_date?.day}/${selected_date?.month}/${selected_date?.year}')),
                                       // Row(
                                       //   children: [
                                       //     Expanded(
@@ -575,7 +617,7 @@ class NavigationState extends State<Navigation> {
                                         child: selected_date_second == null
                                             ? const Text('Select Date')
                                             : Text(
-                                                '${selected_date_second?.day}/${selected_date_second?.month}/${selected_date_second?.year}'),
+                                            '${selected_date_second?.day}/${selected_date_second?.month}/${selected_date_second?.year}'),
                                       )
                                     ],
                                   ),
@@ -592,7 +634,7 @@ class NavigationState extends State<Navigation> {
                                 ElevatedButton(
                                     onPressed: () async {
                                       if ((selected_date == '' ||
-                                              selected_date == null) &&
+                                          selected_date == null) &&
                                           (selected_date_second == '' ||
                                               selected_date_second == null)) {
                                         Fluttertoast.showToast(
@@ -604,22 +646,22 @@ class NavigationState extends State<Navigation> {
                                           if (coor_points > 2000) {
                                             Fluttertoast.showToast(
                                                 msg:
-                                                    'Select more than 2000 points only if you have high-end device',
+                                                'Select more than 2000 points only if you have high-end device',
                                                 toastLength: Toast.LENGTH_LONG,
                                                 gravity: ToastGravity.BOTTOM);
                                           }
                                           await getCoordinates(
                                               coor_points.toInt(), sl_date);
                                           int total_count_points =
-                                              await SqlDatabase
-                                                  .instance
-                                                  .select_coor_first_count(
-                                                      coor_points.toInt(),
-                                                      sl_date);
+                                          await SqlDatabase
+                                              .instance
+                                              .select_coor_first_count(
+                                              coor_points.toInt(),
+                                              sl_date);
                                           if (total_count_points == 0) {
                                             Fluttertoast.showToast(
                                                 msg:
-                                                    'Selected date does not have saved points',
+                                                'Selected date does not have saved points',
                                                 toastLength: Toast.LENGTH_LONG,
                                                 gravity: ToastGravity.BOTTOM);
                                             return;
@@ -632,14 +674,14 @@ class NavigationState extends State<Navigation> {
                                           await getCoordinatesSecond(
                                               coor_points.toInt(), sl_date);
                                           int total_count_points_second =
-                                              await SqlDatabase.instance
-                                                  .select_coor_second_count(
-                                                      coor_points.toInt(),
-                                                      sl_date);
+                                          await SqlDatabase.instance
+                                              .select_coor_second_count(
+                                              coor_points.toInt(),
+                                              sl_date);
                                           if (total_count_points_second == 0) {
                                             Fluttertoast.showToast(
                                                 msg:
-                                                    'Selected date does not have saved points',
+                                                'Selected date does not have saved points',
                                                 toastLength: Toast.LENGTH_LONG,
                                                 gravity: ToastGravity.BOTTOM);
                                             return;
@@ -647,7 +689,7 @@ class NavigationState extends State<Navigation> {
                                               2000) {
                                             Fluttertoast.showToast(
                                                 msg:
-                                                    'Showing only the first 2000 points',
+                                                'Showing only the first 2000 points',
                                                 toastLength: Toast.LENGTH_LONG,
                                                 gravity: ToastGravity.BOTTOM);
                                           }
@@ -719,79 +761,92 @@ class NavigationState extends State<Navigation> {
                 //   ),
                 // ),
                 SlidingUpPanel(
-                  controller: panelController,
-                  minHeight: size.height * 0.06,
-                  maxHeight: size.height * 0.5,
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(18.0)),
-                  parallaxEnabled: true,
-                  parallaxOffset: 0.5,
-                  color: themeProvider.isDarkMode == true ? Colors.grey.shade900 : Colors.white,
-                  panel: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 24),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        SizedBox(height: size.height * 0.03),
-                        GestureDetector(
-                          child: Center(
-                            child: Container(
-                              width: 45,
-                              height: 10,
-                              decoration: BoxDecoration(
-                                  color: Colors.grey[300],
-                                  borderRadius: BorderRadius.circular(12)),
-                            ),
-                          ),
-                          onTap: () => panelController.isPanelOpen
-                              ? panelController.close()
-                              : panelController.open(),
-                        ),
-                        SizedBox(height: size.height * 0.03),
-                        Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    controller: panelController,
+                    minHeight: size.height * 0.06,
+                    maxHeight: size.height * 0.5,
+                    borderRadius: const BorderRadius.vertical(top: Radius.circular(18.0)),
+                    parallaxEnabled: true,
+                    parallaxOffset: 0.5,
+                    color: themeProvider.isDarkMode == true ? Colors.grey.shade900 : Colors.white,
+                    panel: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 24),
+                        child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Column(
-                                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                                  children: [
-                                    const AutoSizeText(
-                                        'Distance Travelled in Km',
-                                        minFontSize: 10,
-                                        maxFontSize: 18,
-                                        style: TextStyle(fontWeight: FontWeight.bold)
-                                    ),
-                                    Text('${distance.toStringAsFixed(2)} Km',
-                                        style: const TextStyle(fontSize: 16.0))
-                                  ]
+                              SizedBox(height: size.height * 0.03),
+                              GestureDetector(
+                                child: Center(
+                                  child: Container(
+                                    width: 45,
+                                    height: 10,
+                                    decoration: BoxDecoration(
+                                        color: Colors.grey[300],
+                                        borderRadius: BorderRadius.circular(12)),
+                                  ),
+                                ),
+                                onTap: () => panelController.isPanelOpen
+                                    ? panelController.close()
+                                    : panelController.open(),
                               ),
-                              Column(
-                                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                              SizedBox(height: size.height * 0.03),
+                              Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   children: [
-                                    const AutoSizeText(
-                                        'Moving Speed in Km/h',
-                                        minFontSize: 10,
-                                        maxFontSize: 18,
-                                        style: TextStyle(fontWeight: FontWeight.bold)
+                                    Column(
+                                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                        children: [
+                                          const AutoSizeText(
+                                              'Distance Travelled in Km',
+                                              minFontSize: 8,
+                                              maxFontSize: 14,
+                                              style: TextStyle(fontWeight: FontWeight.bold)
+                                          ),
+                                          Text('${distance.toStringAsFixed(2)} Km',
+                                              style: const TextStyle(fontSize: 14.0))
+                                        ]
                                     ),
-                                    Text(speed.toStringAsFixed(1),
-                                        style: const TextStyle(fontSize: 16.0))
-                                  ]
-                              )
-                            ]
-                        ),
-                    SizedBox(height: size.height * 0.03),
-                    Row(
-                      children: [
-                        Expanded(
-                            child: Text("Activity: ${determineActivity(speed)['activity']}", style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold))
-                        ),
-                        const SizedBox(width: 10),  // Space between text and image
-                        Image.asset(determineActivity(speed)['image']!, width: 50)  // Display the image
-                      ],
-                    ),
-                  ]),
-                )
-                )
-              ],
+                                    Column(
+                                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                        children: [
+                                          const AutoSizeText(
+                                              'Moving Speed in Km/h',
+                                              minFontSize: 8,
+                                              maxFontSize: 14,
+                                              style: TextStyle(fontWeight: FontWeight.bold)
+                                          ),
+                                          Text(speed.toStringAsFixed(1),
+                                              style: const TextStyle(fontSize: 14.0))
+                                        ]),
+                                  ]),
+                                  SizedBox(height: size.height * 0.03),
+                                  Center(
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Image.asset(
+                                          getActivityImage(currentActivity),
+                                          width: 40,
+                                          height: 40,
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Column(
+                                          children: [
+                                            const AutoSizeText(
+                                              'Current Activity',
+                                              minFontSize: 8,
+                                              maxFontSize: 14,
+                                              style: TextStyle(fontWeight: FontWeight.bold)
+                                            ),
+                                            Text(
+                                              currentActivity,
+                                              style: const TextStyle(fontSize: 14.0),
+                                        )
+                                      ])
+                                  ])
+                                )
+                            ])
+                    )
+                )],
             );
           } else {
             return buildPermissionSheet();
