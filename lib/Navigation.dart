@@ -460,14 +460,14 @@ class NavigationState extends State<Navigation> {
                         headingSectorRadius: 120,
                         // markerAnimationDuration: Duration(milliseconds: Duration.millisecondsPerSecond),
                       ),
-                      alignPositionStream:follow_current_location_StreamController.stream,
+                      alignPositionStream: follow_current_location_StreamController.stream,
                       alignPositionOnUpdate: follow_on_location_update,
-                    )
-                    ,
-                    TappablePolylineLayer(
+                    ),
+                    MobileLayerTransformer(
+                      child: TappablePolylineLayer(
                         polylineCulling: true,
                         pointerDistanceTolerance: 20,
-                        onTap: (polylines, tapPosition) => print('Tapped: ' + polylines.map((polyline) => polyline.tag).join(',') + 'at' + tapPosition.globalPosition.toString()),
+                        onTap: (polylines, tapPosition) => print('Tapped: ' + polylines.map((polyline) => polyline.tag).join(',') + ' at ' + tapPosition.globalPosition.toString()),
                         polylines: polylineCoordinates.isNotEmpty
                             ? [
                           TaggedPolyline(
@@ -477,7 +477,30 @@ class NavigationState extends State<Navigation> {
                             strokeWidth: 9.0,
                           ),
                         ]
-                            : [] // If polylineCoordinates is empty, don't create any polylines
+                            : [], // If polylineCoordinates is empty, don't create any polylines
+                      ),
+                    ),
+                    MarkerLayer(
+                      markers: polylineCoordinates.isNotEmpty
+                          ? [
+                        Marker(
+                          width: 50,
+                          height: 32,
+                          point: polylineCoordinates.first,
+                          child: Image.asset('assets/marker_walking.png'),
+                        ),
+                        Marker(
+                          width: 50,
+                          height: 32,
+                          point: polylineCoordinates.last,
+                          child: Image.asset(
+                            'assets/marker_standing.png',
+                            scale: 15,
+                          ),
+                        ),
+                      ]
+                          : [], // If polylineCoordinates is empty, don't create any markers
+                      rotate: true,
                     ),
                     MarkerLayer(
                       markers: polylineCoordinates.isNotEmpty
@@ -818,9 +841,9 @@ class NavigationState extends State<Navigation> {
                                               style: const TextStyle(fontSize: 14.0))
                                         ]),
                                   ]),
-                                  SizedBox(height: size.height * 0.03),
-                                  Center(
-                                    child: Row(
+                              SizedBox(height: size.height * 0.03),
+                              Center(
+                                  child: Row(
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
                                         Image.asset(
@@ -830,20 +853,20 @@ class NavigationState extends State<Navigation> {
                                         ),
                                         const SizedBox(width: 8),
                                         Column(
-                                          children: [
-                                            const AutoSizeText(
-                                              'Current Activity',
-                                              minFontSize: 8,
-                                              maxFontSize: 14,
-                                              style: TextStyle(fontWeight: FontWeight.bold)
-                                            ),
-                                            Text(
-                                              currentActivity,
-                                              style: const TextStyle(fontSize: 14.0),
-                                        )
+                                            children: [
+                                              const AutoSizeText(
+                                                  'Current Activity',
+                                                  minFontSize: 8,
+                                                  maxFontSize: 14,
+                                                  style: TextStyle(fontWeight: FontWeight.bold)
+                                              ),
+                                              Text(
+                                                currentActivity,
+                                                style: const TextStyle(fontSize: 14.0),
+                                              )
+                                            ])
                                       ])
-                                  ])
-                                )
+                              )
                             ])
                     )
                 )],
