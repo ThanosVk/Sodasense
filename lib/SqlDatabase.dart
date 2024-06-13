@@ -297,13 +297,31 @@ class SqlDatabase {
     return result;
   }
 
-  Future select_total_steps_per_day() async {
+  Future<List<Map<String, dynamic>>> select_total_steps_per_day() async {
     final db = await instance.database;
-    final currentDate = DateTime.now().millisecondsSinceEpoch;
-    final endOfWeek = currentDate - 604800000;
 
-    var result = await db.rawQuery(
-        'SELECT date, steps FROM sensors WHERE date >= $endOfWeek AND date <= $currentDate GROUP BY date');
+    // Get the current date and calculate the start of the current week
+    final now = DateTime.now();
+    final startOfWeek = DateTime(now.year, now.month, now.day - now.weekday + 1).millisecondsSinceEpoch;
+    final endOfWeek = DateTime(now.year, now.month, now.day + (7 - now.weekday)).millisecondsSinceEpoch;
+
+    // Fetch steps data between the start and end of the current week
+    final result = await db.rawQuery(
+        'SELECT date, SUM(steps) as steps FROM daily_steps WHERE date >= ? AND date <= ? GROUP BY date',
+        [startOfWeek, endOfWeek]
+    );
+
+    return result;
+  }
+
+  // New Method to fetch steps for a specific date range
+  Future<List<Map<String, dynamic>>> select_steps_for_date_range(int startOfDay, int endOfDay) async {
+    final db = await instance.database;
+
+    final result = await db.rawQuery(
+        'SELECT SUM(steps) as steps FROM daily_steps WHERE date >= ? AND date <= ?',
+        [startOfDay, endOfDay]
+    );
 
     return result;
   }

@@ -395,11 +395,8 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
-
-    setupLocationListener(); // Initialize location listener
-
     WidgetsBinding.instance.addObserver(this);
-
+    setupLocationListener(); // Initialize location listener
     initForegroundTask();
     startForegroundTask();
     FlutterForegroundTask.requestIgnoreBatteryOptimization();
@@ -411,7 +408,7 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
     initPlatformState();
     fetchPermissionStatus();
 
-    //Start listening to values with listener
+    // Start listening to values with listeners
     stepController.addListener(stepscount);
     heightController.addListener(heightcount);
 
@@ -424,7 +421,6 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
     // box.get('');
 
     initConnectivity();
-
     connectivitySubscription = connectivity.onConnectivityChanged.listen(updateConnectionStatus);
 
     //Sensors
@@ -545,7 +541,6 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
     });
 
     _tooltip = TooltipBehavior(enable: true);
-
     fetchWeeklyStepsData();
   }
 
@@ -561,19 +556,26 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
 
   @override
   void dispose() {
-    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
-
     WidgetsBinding.instance.removeObserver(this);
-
     stepController.dispose();
     heightController.dispose();
     closeReceivePort();
-
     _streamSubscription.cancel();
-
     //Hive.close(); den xreiazetai aparaitita
-
     super.dispose();
+  }
+
+  void refreshData() async {
+    // Refresh the steps data by day
+    await getStepsByDay();
+
+    // Fetch other necessary data
+    fetchWeeklyStepsData();
+
+    // Update the state to refresh the UI
+    setState(() {
+      // Here we can update other state variables if needed, check if it is, well, needed. Further testing required.
+    });
   }
 
   @override
@@ -585,6 +587,8 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
     final isBackground = state == AppLifecycleState.paused;
 
     if (state == AppLifecycleState.resumed) {
+      // App has come to the foreground, refresh data here
+      refreshData();
       NavigationState().location.enableBackgroundMode(enable: false);
       print('Seen by the user');
     } else if (isBackground) {
@@ -1183,26 +1187,26 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
   }
 
   // Adjusted this method to correctly determine the step count for each day
-  void generateData() {
+  void generateData() async {
     DateTime currentDate = DateTime.now();
-    DateTime startOfWeek =
-    currentDate.subtract(Duration(days: currentDate.weekday - 1));
-// changed from 6 to 7
+    DateTime startOfWeek = currentDate.subtract(Duration(days: currentDate.weekday - 1));
 
     List<ChartData> generatedData = [];
     int maxSteps = 0;
 
     for (int i = 0; i < 7; i++) {
       DateTime date = startOfWeek.add(Duration(days: i));
-      int stepsForDay = getStepCountForDate(date);
+      int stepsForDay = await getStepCountForDate(date);
       maxSteps = max(maxSteps, stepsForDay); // Update maxSteps
       String dayOfWeek = DateFormat('EEE').format(date); // Three-letter day abbreviation
       String formattedDate = DateFormat('dd/MM').format(date); // dd/mm format
-      generatedData.add(ChartData('$dayOfWeek\n$formattedDate', getStepCountForDate(date)));
+      generatedData.add(ChartData('$dayOfWeek\n$formattedDate', stepsForDay));
     }
 
-    data = generatedData;
-    updateGraphMaxValue(maxSteps + 100);
+    setState(() {
+      data = generatedData;
+      updateGraphMaxValue(maxSteps + 100);
+    });
   }
 
   // New method to update the maximum value on the graph
@@ -1212,28 +1216,19 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
     });
   }
 
-  int getStepCountForDate(DateTime date) {
-    // Replace this with your logic to get step count for the given date
-    // For example, you could use a map or database to store step data
-    // and retrieve it based on the date.
-    String dayOfWeekfullname = DateFormat('EEEE').format(date);
-    //Monday = 50; // android studio emulator test
-    //Tuesday = 30;
-    Map<String, int> dayToStepMap = {
-      'Monday': Monday,
-      'Tuesday': Tuesday,
-      'Wednesday': Wednesday,
-      'Thursday': Thursday,
-      'Friday': Friday,
-      'Saturday': Saturday,
-      'Sunday': Sunday,
-    };
+  Future<int> getStepCountForDate(DateTime date) async {
+    // Convert the date to the start of the day in milliseconds
+    final startOfDay = DateTime(date.year, date.month, date.day).millisecondsSinceEpoch;
+    final endOfDay = DateTime(date.year, date.month, date.day, 23, 59, 59).millisecondsSinceEpoch;
 
-    int daysteps = dayToStepMap[dayOfWeekfullname] ?? 0;
-    print(
-        'Ta vimata pare $Monday, $Tuesday, $Wednesday, $Thursday, $Friday, $Saturday, $Sunday');
+    // Fetch step count from the database for the specific date
+    List<Map<String, dynamic>> stepsData = await SqlDatabase.instance.select_steps_for_date_range(startOfDay, endOfDay);
 
-    return daysteps;
+    if (stepsData.isNotEmpty) {
+      return stepsData[0]['steps'] ?? 0;
+    } else {
+      return 0;
+    }
   }
 
   @override
