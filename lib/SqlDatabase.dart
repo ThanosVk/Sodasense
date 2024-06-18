@@ -59,6 +59,28 @@ class SqlDatabase {
         'CREATE TABLE sensors (id INTEGER PRIMARY KEY AUTOINCREMENT, date INTEGER, pressure REAL, acc_x REAL, acc_y REAL, acc_z REAL,gyro_x REAL, gyro_y REAL, gyro_z REAL,magn_x REAL, magn_y REAL, magn_z REAL, dist TEXT,steps INTEGER, updated INTEGER)');
   }
 
+  Future<List<Map<String, dynamic>>> select_steps_for_current_week() async {
+    final db = await instance.database;
+
+    final now = DateTime.now().toUtc();
+    final startOfWeek = DateTime.utc(now.year, now.month, now.day - now.weekday + 1);
+    final endOfWeek = startOfWeek.add(Duration(days: 6)).subtract(Duration(seconds: 1));
+
+    final result = await db.rawQuery(
+      'SELECT date, SUM(steps) as steps FROM daily_steps WHERE date >= ? AND date <= ? GROUP BY date',
+      [startOfWeek.millisecondsSinceEpoch, endOfWeek.millisecondsSinceEpoch],
+    );
+
+    // Logging fetched data for debugging
+    result.forEach((row) {
+      DateTime date = DateTime.fromMillisecondsSinceEpoch(row['date'] as int, isUtc: true).toLocal();
+      int steps = row['steps'] as int;
+      print("Database fetched data - Date: ${date.toString()}, Steps: $steps");
+    });
+
+    return result;
+  }
+
   Future insert_coor(int date, double lat, double lng, int updated) async {
     final db = await instance.database;
 
@@ -110,11 +132,15 @@ class SqlDatabase {
         'INSERT INTO proximity(date, dist, updated) VALUES($date, $dist, $updated)');
   }
 
-  Future insert_daily_steps(int date, int steps, int updated) async {
+  Future<void> insert_daily_steps(int date, int steps, int updated) async {
     final db = await instance.database;
 
     await db.rawInsert(
-        'INSERT INTO daily_steps(date, steps, updated) VALUES($date, $steps, $updated)');
+      'INSERT INTO daily_steps(date, steps, updated) VALUES(?, ?, ?)',
+      [date, steps, updated],
+    );
+
+    print("Inserted steps: $steps on date: $date");
   }
 
   Future insert_sensors(

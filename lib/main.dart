@@ -423,12 +423,15 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
     initConnectivity();
     connectivitySubscription = connectivity.onConnectivityChanged.listen(updateConnectionStatus);
 
-    //Sensors
+    // Sensors
     check_pressure_availability();
     check_proximity_availability();
     check_acc_availability();
     check_gyro_availability();
     check_magn_availability();
+
+    // Fetch weekly steps data
+    fetchWeeklyStepsData();
 
     //accelerometer initialization event
     userAccelerometerEventStream().listen((UserAccelerometerEvent event) {
@@ -546,11 +549,21 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
 
   // Method to fetch weekly steps data
   void fetchWeeklyStepsData() async {
-    // Fetch step count data for each day of the current week
+    List<Map<String, dynamic>> stepsData = await SqlDatabase.instance.select_steps_for_current_week();
+
+    // Process the fetched data to get step counts for each day of the current week
+    Map<String, int> weeklySteps = {};
+    stepsData.forEach((data) {
+      DateTime date = DateTime.fromMillisecondsSinceEpoch(data['date'] as int, isUtc: true).toLocal();
+      String dayOfWeek = DateFormat('EEE').format(date); // Three-letter day abbreviation
+      int steps = data['steps'] as int;
+      weeklySteps[dayOfWeek] = steps;
+      print("Fetched data - Date: ${date.toString()}, Day: $dayOfWeek, Steps: $steps"); // Logging
+    });
+
     // Update the state to reflect the new data
     setState(() {
-      getStepsByDay();
-      generateData();
+      generateData(weeklySteps);
     });
   }
 
@@ -626,18 +639,17 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
       if (box.get('today_steps') == null) {
         box.put('today_steps', 0);
       } else {
-        //numsteps++;
-        //sum_steps = box.get('today_steps') + numsteps;
         box.put('today_steps', box.get('today_steps') + 1);
-        dist = double.parse(((box.get('today_steps') *
-            box.get('steps_length')) /
-            1000)
-            .toStringAsFixed(
-            3)); //(box.get('today_steps') * box.get('steps_length'))/ 1000;
+        dist = double.parse(((box.get('today_steps') * box.get('steps_length')) / 1000).toStringAsFixed(3));
       }
     });
 
     box.put('date', date_once);
+
+    // Insert steps into the database and refresh the chart data
+    insert_toDb().then((_) {
+      fetchWeeklyStepsData();
+    });
   }
 
   void onStepCountError(error) {
@@ -687,7 +699,7 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
     }
   }
 
-  insert_toDb() async {
+  Future<void> insert_toDb() async {
     int stp = box.get('today_steps');
     date = DateTime.now().millisecondsSinceEpoch;
     await SqlDatabase.instance.insert_daily_steps(date, stp, 0);
@@ -1183,11 +1195,11 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
       }
     });
 
-    generateData();
+    generateData(arr);
   }
 
-  // Adjusted this method to correctly determine the step count for each day
-  void generateData() async {
+  // Method to correctly determine the step count for each day
+  void generateData(Map<String, int> weeklySteps) {
     DateTime currentDate = DateTime.now();
     DateTime startOfWeek = currentDate.subtract(Duration(days: currentDate.weekday - 1));
 
@@ -1196,17 +1208,32 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
 
     for (int i = 0; i < 7; i++) {
       DateTime date = startOfWeek.add(Duration(days: i));
-      int stepsForDay = await getStepCountForDate(date);
-      maxSteps = max(maxSteps, stepsForDay); // Update maxSteps
       String dayOfWeek = DateFormat('EEE').format(date); // Three-letter day abbreviation
       String formattedDate = DateFormat('dd/MM').format(date); // dd/mm format
-      generatedData.add(ChartData('$dayOfWeek\n$formattedDate', stepsForDay));
+
+      // Check if the date falls within the current week
+      if (date.isAfter(startOfWeek.subtract(Duration(days: 1))) && date.isBefore(startOfWeek.add(Duration(days: 7)))) {
+        int stepsForDay = weeklySteps[dayOfWeek] ?? 0; // Use 0 if no data for the day
+        maxSteps = max(maxSteps, stepsForDay); // Update maxSteps
+        generatedData.add(ChartData('$dayOfWeek\n$formattedDate', stepsForDay));
+        print("Processed data - Day: $dayOfWeek, Formatted Date: $formattedDate, Steps: $stepsForDay"); // Logging
+      } else {
+        print("Date out of range - Day: $dayOfWeek, Formatted Date: $formattedDate"); // Logging
+      }
     }
 
     setState(() {
       data = generatedData;
       updateGraphMaxValue(maxSteps + 100);
     });
+  }
+
+  // Helper method to validate if a date is within the current week
+  bool isDateInCurrentWeek(DateTime date) {
+    DateTime now = DateTime.now();
+    DateTime startOfWeek = now.subtract(Duration(days: now.weekday - 1));
+    DateTime endOfWeek = startOfWeek.add(Duration(days: 6));
+    return date.isAfter(startOfWeek.subtract(Duration(days: 1))) && date.isBefore(endOfWeek.add(Duration(days: 1)));
   }
 
   // New method to update the maximum value on the graph
@@ -1224,7 +1251,7 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
     // Fetch step count from the database for the specific date
     List<Map<String, dynamic>> stepsData = await SqlDatabase.instance.select_steps_for_date_range(startOfDay, endOfDay);
 
-    if (stepsData.isNotEmpty) {
+    if (stepsData.isNotEmpty && stepsData[0]['steps'] != null) {
       return stepsData[0]['steps'] ?? 0;
     } else {
       return 0;
@@ -1321,8 +1348,7 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
                                       primaryXAxis: const CategoryAxis(
                                         majorGridLines: MajorGridLines(
                                             color: Colors.transparent),
-                                        labelIntersectAction:
-                                        AxisLabelIntersectAction.rotate45,
+                                        labelIntersectAction: AxisLabelIntersectAction.rotate45,
                                         labelStyle: TextStyle(
                                           color: Colors.black,
                                           fontSize: 14,
@@ -1335,11 +1361,14 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver {
                                         majorGridLines: const MajorGridLines(
                                             color: Colors
                                                 .transparent), // Hide minor tick lines
-                                        labelIntersectAction: AxisLabelIntersectAction.rotate45, labelStyle: const TextStyle(color: Colors.black, fontSize: 10,
-                                      ),
+                                        labelIntersectAction: AxisLabelIntersectAction.rotate45,
+                                        labelStyle: const TextStyle(
+                                          color: Colors.black,
+                                          fontSize: 10,
+                                        ),
                                       ),
                                       tooltipBehavior: _tooltip,
-                                      series: <ColumnSeries<ChartData, String>>[ // Change ChartSeries to ColumnSeries
+                                      series: <ColumnSeries<ChartData, String>>[
                                         ColumnSeries<ChartData, String>(
                                           dataSource: data,
                                           xValueMapper: (ChartData data, _) => data.x,
