@@ -5,13 +5,9 @@ import 'package:path/path.dart';
 class SqlDatabase{
 
   static final SqlDatabase instance = SqlDatabase._init();
-
   static Database? _database;
 
   SqlDatabase._init();
-
-
-  //Database database = await openDatabase(path,version: 1,onCreate: _createDB);
 
   Future<Database> get database async{
     if(_database != null) return _database!;
@@ -22,7 +18,6 @@ class SqlDatabase{
   }
 
   Future<Database> _initDB(String  filePath) async{
-
     final dbPath = await getDatabasesPath();
     final path = join(dbPath, filePath);
 
@@ -320,13 +315,61 @@ class SqlDatabase{
     return result;
   }
 
-  Future select_total_steps_per_day() async {
+  Future <List<Map<String, dynamic>>> select_total_steps_per_day() async {
 
+    // final db = await instance.database;
+    // final currentDate = DateTime.now().millisecondsSinceEpoch;
+    // final endOfWeek = currentDate - 604800000;
+    //
+    // var result = await db.rawQuery('SELECT date, steps FROM sensors WHERE date >= $endOfWeek AND date <= $currentDate GROUP BY date');
+    //
+    // return result;
     final db = await instance.database;
-    final currentDate = DateTime.now().millisecondsSinceEpoch;
-    final endOfWeek = currentDate - 604800000;
 
-    var result = await db.rawQuery('SELECT date, steps FROM sensors WHERE date >= $endOfWeek AND date <= $currentDate GROUP BY date');
+    // Get the current date and calculate the start of the current week
+    final now = DateTime.now();
+    final startOfWeek = DateTime(now.year, now.month, now.day - now.weekday + 1).millisecondsSinceEpoch;
+    final endOfWeek = DateTime(now.year, now.month, now.day + (7 - now.weekday)).millisecondsSinceEpoch;
+
+    // Fetch steps data between the start and end of the current week
+    final result = await db.rawQuery(
+        'SELECT date, SUM(steps) as steps FROM daily_steps WHERE date >= ? AND date <= ? GROUP BY date',
+        [startOfWeek, endOfWeek]
+    );
+
+    return result;
+  }
+
+  Future<List<Map<String, dynamic>>> select_steps_for_current_week() async {
+    final db = await instance.database;
+
+    final now = DateTime.now().toUtc();
+    final startOfWeek = DateTime.utc(now.year, now.month, now.day - now.weekday + 1);
+    final endOfWeek = startOfWeek.add(Duration(days: 6)).subtract(Duration(seconds: 1));
+
+    final result = await db.rawQuery(
+      'SELECT date, SUM(steps) as steps FROM daily_steps WHERE date >= ? AND date <= ? GROUP BY date',
+      [startOfWeek.millisecondsSinceEpoch, endOfWeek.millisecondsSinceEpoch],
+    );
+
+    // Logging fetched data for debugging
+    result.forEach((row) {
+      DateTime date = DateTime.fromMillisecondsSinceEpoch(row['date'] as int, isUtc: true).toLocal();
+      int steps = row['steps'] as int;
+      print("Database fetched data - Date: ${date.toString()}, Steps: $steps");
+    });
+
+    return result;
+  }
+
+  // New Method to fetch steps for a specific date range
+  Future<List<Map<String, dynamic>>> select_steps_for_date_range(int startOfDay, int endOfDay) async {
+    final db = await instance.database;
+
+    final result = await db.rawQuery(
+        'SELECT SUM(steps) as steps FROM daily_steps WHERE date >= ? AND date <= ?',
+        [startOfDay, endOfDay]
+    );
 
     return result;
   }

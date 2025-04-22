@@ -78,13 +78,13 @@ class _CompassState extends State<Compass> {
 
     serviceEnabled = await Geolocator.isLocationServiceEnabled();
 
-    return await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.best);
+    return await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.bestForNavigation);
   }
 
   //Function for getting lat lng and
   Future<void> GetAddressFromLatLong(Position position)async {
     List<Placemark> placemarks = await placemarkFromCoordinates(position.latitude, position.longitude);
-    double alt_placemarks = await position.altitude;
+    // double alt_placemarks = await position.altitude;
     print(placemarks);
     Placemark place = placemarks[0];
     setState(()  {
@@ -128,94 +128,95 @@ class _CompassState extends State<Compass> {
           IconButton(
               alignment: Alignment.center,
               icon: Icon(Icons.location_on_outlined),
-              onPressed: ()  =>
-              {
-                getData(),
+              onPressed: () async {
+                getData();
                 if(serviceEnabled == true){
                   setState(() {
                     // loc = location;
                     adr = Address;
-                    alt = '$Altitude';
-                  }),
+                    alt = '${Altitude.toStringAsFixed(2)}';
+                  });
                 }
                 else{
-                  print(serviceEnabled),
+                  print(serviceEnabled);
                   setState(() {
                     loc ='Enable gps to get coordinates';
                     adr ='Connect to internet to get Adrress';
                     alt = 'Enable gps to get altitude';
-                  }),
+                  });
                 }
               }
           )
         ],
       ),
       body: SafeArea(
-        child: Center(
-          child: Builder(builder: (context) {
-            if(hasPermissions){
-              if(serviceEnabled){
-                loc = location;
-                adr = Address;
-                alt = '$Altitude';
-              }
-              else{
-                loc = 'Enable gps to get Location';
-                adr = 'Connect to internet to get Adrress';
-                alt = 'Enable gps to get altitude';
-              }
-              return Column(
-                children: <Widget>[
-                  SizedBox(height: size.height * 0.05),
-                  buildCompass(),
-                  Text('\n\n${angle.toStringAsFixed(0)}°'),
-                  Text.rich(
-                    TextSpan(
-                        // style: const TextStyle(
-                        //   color: Colors.black,
-                        // ),
-                      children: <TextSpan>[
-                        TextSpan(text: 'Adrress: ',style: const TextStyle(fontWeight: FontWeight.bold)),
-                        TextSpan(text: '$adr'),
-                      ]
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  Text.rich(
-                    TextSpan(
-                        // style: const TextStyle(
-                        //   color: Colors.black,
-                        // ),
-                        children: serviceEnabled==true  ? [
-                          TextSpan(text: 'Lat: ',style: const TextStyle(fontWeight: FontWeight.bold)),
-                          TextSpan(text: '${lat},'),
-                          TextSpan(text: ' Lon: ',style: const TextStyle(fontWeight: FontWeight.bold)),
-                          TextSpan(text: '${lng}'),
-                        ]
-                        : [
-                          TextSpan(text: '$loc')
-                        ]
-                    ),
-                  ),
-                  Text.rich(
-                    TextSpan(
-                        // style: const TextStyle(
-                        //   color: Colors.black,
-                        // ),
+        child: SingleChildScrollView(
+          child: Center(
+            child: Builder(builder: (context) {
+              if(hasPermissions){
+                if(serviceEnabled){
+                  loc = location;
+                  adr = Address;
+                  alt = '${Altitude.toStringAsFixed(2)}';
+                }
+                else{
+                  loc = 'Enable gps to get Location';
+                  adr = 'Connect to internet to get Adrress';
+                  alt = 'Enable gps to get altitude';
+                }
+                return Column(
+                  children: <Widget>[
+                    // SizedBox(height: size.height * 0.05),
+                    buildCompass(),
+                    Text('\n\n${angle.toStringAsFixed(0)}°'),
+                    Text.rich(
+                      TextSpan(
+                          // style: const TextStyle(
+                          //   color: Colors.black,
+                          // ),
                         children: <TextSpan>[
-                          TextSpan(text: 'Altitude: ',style: const TextStyle(fontWeight: FontWeight.bold)),
-                          TextSpan(text: '$alt'),
+                          TextSpan(text: 'Adrress: ',style: const TextStyle(fontWeight: FontWeight.bold)),
+                          TextSpan(text: '$adr'),
                         ]
+                      ),
+                      textAlign: TextAlign.center,
                     ),
-                  ),
-                  //Build_Adrress(),
-                ],
-              );
-            }
-            else {
-              return buildPermissionSheet();
-            }
-          }),
+                    Text.rich(
+                      TextSpan(
+                          // style: const TextStyle(
+                          //   color: Colors.black,
+                          // ),
+                          children: serviceEnabled==true  ? [
+                            TextSpan(text: 'Lat: ',style: const TextStyle(fontWeight: FontWeight.bold)),
+                            TextSpan(text: '${lat},'),
+                            TextSpan(text: ' Lon: ',style: const TextStyle(fontWeight: FontWeight.bold)),
+                            TextSpan(text: '${lng}'),
+                          ]
+                          : [
+                            TextSpan(text: '$loc')
+                          ]
+                      ),
+                    ),
+                    Text.rich(
+                      TextSpan(
+                          // style: const TextStyle(
+                          //   color: Colors.black,
+                          // ),
+                          children: <TextSpan>[
+                            TextSpan(text: 'Altitude: ',style: const TextStyle(fontWeight: FontWeight.bold)),
+                            TextSpan(text: '$alt'),
+                          ]
+                      ),
+                    ),
+                    //Build_Adrress(),
+                  ],
+                );
+              }
+              else {
+                return buildPermissionSheet();
+              }
+            }),
+          ),
         ),
       ),
     );

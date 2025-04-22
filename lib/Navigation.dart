@@ -1,5 +1,7 @@
+import 'package:auto_size_text/auto_size_text.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_activity_recognition/flutter_activity_recognition.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:fluttertoast/fluttertoast.dart';
@@ -12,19 +14,17 @@ import 'dart:async';
 import 'package:geolocator/geolocator.dart' as geo;
 import 'package:location/location.dart' as loc;
 import 'package:flutter_map_location_marker/flutter_map_location_marker.dart';
-import 'package:flutter_map_tappable_polyline/flutter_map_tappable_polyline.dart';
 import 'package:intl/intl.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:hive/hive.dart';
 import 'package:thesis/SqlDatabase.dart';
-import 'package:flutter/services.dart';
 import 'package:sliding_up_panel/sliding_up_panel.dart';
 import 'package:thesis/Theme_provider.dart';
 
 class CachedTileProvider extends TileProvider {
-  const CachedTileProvider({customCacheManager});
+  CachedTileProvider({customCacheManager});
   @override
-  ImageProvider getImage(Coords<num> coords, TileLayerOptions options) {
+  ImageProvider getImage(TileCoordinates coords, TileLayer options) {
     return CachedNetworkImageProvider(
       getTileUrl(coords, options),
       //Now you can set options that determine how the image gets cached via whichever plugin you use.
@@ -50,24 +50,18 @@ class NavigationState extends State<Navigation> {
 
   geo.Position ?currentPosition;
 
-  late CenterOnLocationUpdate center_on_location_update;
-  late StreamController<double> center_current_location_StreamController;
+  AlignOnUpdate follow_on_location_update = AlignOnUpdate.never;
+  StreamController<double> follow_current_location_StreamController = StreamController<double>();
 
   Completer<MapController> controllerMap = Completer();
-  MapController ?newMapController;
-  // Set<Polyline> polylines = Set<Polyline>();
+  MapController newMapController = MapController();
   List<LatLng> polylineCoordinates =[]; //for saving the coordinates temporary from db to be displayed on map
   // Polyline polylinePoints = new PolylinePoints();
-
+  loc.Location location = new loc.Location();
   loc.LocationData ?currentLocation;
   loc.LocationData ?destinationLocation;
-
-  loc.Location location = new loc.Location();
-
   //Date for using date in the database
   int date = 0;
-
-  // String date = DateFormat('dd-MM-yyyy-HH-mm-ss').format(DateTime.now());
 
   //Date for showing in the map
   String date_show = DateFormat('HH-mm,dd-MMMM-yyyy').format(DateTime.now());
@@ -90,6 +84,10 @@ class NavigationState extends State<Navigation> {
   //panelController for managing what happens inside the SlidingUpPanel
   final PanelController panelController = PanelController();
 
+  late StreamSubscription<Activity> _activityStreamSubscription;
+  final activityRecognition = FlutterActivityRecognition.instance;
+  String currentActivity = 'UNKNOWN';
+
   static final customCacheManager = CacheManager(
     Config(
         'customCacheKey',
@@ -98,84 +96,115 @@ class NavigationState extends State<Navigation> {
     ),
   );
 
+  // Helper method to format activity type
+  String formatActivityType(String activityType) {
+    switch (activityType) {
+      case 'IN_VEHICLE':
+        return 'In Vehicle';
+      case 'ON_BICYCLE':
+        return 'On Bicycle';
+      case 'RUNNING':
+        return 'Running';
+      case 'STILL':
+        return 'Still';
+      case 'WALKING':
+        return 'Walking';
+      case 'UNKNOWN':
+      default:
+        return 'Unknown';
+    }
+  }
 
-
+  // Method for images path
+  String getActivityImage(String activityType) {
+    switch (activityType) {
+      case 'In Vehicle':
+        return 'assets/driving.png';
+      case 'On Bicycle':
+        return 'assets/cycling.png';
+      case 'Running':
+        return 'assets/running.png';
+      case 'Still':
+        return 'assets/standing.png';
+      case 'Walking':
+        return 'assets/walking.png';
+      case 'Unknown':
+      default:
+        return 'assets/unknown.png';
+    }
+  }
 
   @override
   void initState() {
 
     super.initState();
-
     fetchPermissionStatus();
-
     SqlDatabase.instance.database;
-
-    // setState(() {
-    //   getData();
-    // });
-
-    // setState(() {
-    //   center_on_location_update = CenterOnLocationUpdate.always;
-    //   center_current_location_StreamController = StreamController<double>();
-    //   // getData();
-    // });
-
+    startActivityRecognition();
 
     //location.changeSettings(distanceFilter: 0,interval: 500);
     // location.changeSettings(accuracy: loc.LocationAccuracy.navigation);
     if(mounted){
       setState(() {
 
-        center_on_location_update = CenterOnLocationUpdate.always;
-        center_current_location_StreamController = StreamController<double>();
+        follow_on_location_update = AlignOnUpdate.always;
+        follow_current_location_StreamController = StreamController<double>();
+
 
         location.onLocationChanged.listen((loc.LocationData cLoc) {
-
+          if (!mounted) return;
           currentLocation = cLoc;
 
           setState(() {
             setpoint(cLoc.latitude, cLoc.longitude);
-
             speed = cLoc.speed! * 3.6;
-            //polylineCoordinates.add(LatLng(lat,lng));
-            //faw.add(['$date,$lat,$lng,false']);
-            //box.put('coordinates',faw);
-            //if(polylineCoordinates[0] == LatLng(0,0)){
-            //  polylineCoordinates.removeAt(0);
-            //}
-
-            //polylines[date] = polylineCoordinates;
-            //polylines['ew'] = polylineCoordinates;
-            //print(polylineCoordinates);
-            // print(polylineCoordinates.length);
-
           });
 
-          insert_toDb();
-          //getCoordinates();
         });
-        //getCoordinates();
 
       });
     }
-
-
-
-    print(date);
-    // setState(() {
-    //   getP();
-    // });
-
-    //timer = Timer.periodic(Duration(seconds: 5), (Timer t) => print(date));
-
+    // print(date);
   }
 
   @override
   void dispose() {
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
-    center_current_location_StreamController.close();
+    follow_current_location_StreamController.close();
     //timer?.cancel();
+    _activityStreamSubscription.cancel();
     super.dispose();
+  }
+
+  Future<void> startActivityRecognition() async {
+    final isGranted = await isPermissionGranted();
+    if (isGranted) {
+      _activityStreamSubscription = activityRecognition.activityStream.handleError((error) {
+        // Handle error here
+        print('Activity stream error: $error');
+      }).listen((activity) {
+        setState(() {
+          currentActivity = formatActivityType(activity.type.toString().split('.').last);
+        });
+        // Perform actions based on the detected activity. In this case, log the current activity
+        print('Current activity: $currentActivity');
+      });
+    }
+  }
+
+  Future<bool> isPermissionGranted() async {
+    var reqResult = await activityRecognition.checkPermission();
+    if (reqResult == ActivityPermission.PERMANENTLY_DENIED) {
+      print('Permission is permanently denied.');
+      return false;
+    } else if (reqResult == ActivityPermission.DENIED) {
+      reqResult = await activityRecognition.requestPermission();
+      if (reqResult != ActivityPermission.GRANTED) {
+        print('Permission is denied.');
+        return false;
+      }
+    }
+    return true;
   }
 
   void setpoint(latitude,longitude) async{
@@ -207,7 +236,7 @@ class NavigationState extends State<Navigation> {
 
     serviceEnabled = await geo.Geolocator.isLocationServiceEnabled();
 
-    return await geo.Geolocator.getCurrentPosition(desiredAccuracy: geo.LocationAccuracy.best);
+    return await geo.Geolocator.getCurrentPosition(desiredAccuracy: geo.LocationAccuracy.bestForNavigation);
   }
 
 
@@ -219,20 +248,6 @@ class NavigationState extends State<Navigation> {
     lat = position.latitude;
     lng = position.longitude;
     print('$lat,$lng');
-
-
-  }
-
-  getP(){
-    for(var key in polylines.keys){
-      TaggedPolyline(
-        tag: 'My Polyline',
-        // An optional tag to distinguish polylines in callback
-        points: polylines[key],
-        color: Colors.red,
-        strokeWidth: 9.0,
-      );
-    }
   }
 
   //getCoordinates for getting the coordinates points from the first date picker
@@ -362,41 +377,39 @@ class NavigationState extends State<Navigation> {
                   clipBehavior: Clip.antiAlias,
                   children: [
                     FlutterMap(
+                      mapController: newMapController,
                         options:  MapOptions(
                           minZoom: 4,
-                          center: LatLng(lat,lng),
-                          zoom: 12,
-                          onMapCreated: (MapController controller){
-                            controllerMap.complete(controller);
-                            newMapController = controller;
-
-                            // getData();
-                          },
-                          onPositionChanged: (MapPosition position, bool hasGesture){
+                          initialCenter: LatLng(lat,lng),
+                          initialZoom: 12,
+                          // onMapCreated: (MapController controller){
+                          //   controllerMap.complete(controller);
+                          //   newMapController = controller;
+                          //
+                          //   // getData();
+                          // },
+                          onPositionChanged: (MapCamera position, bool hasGesture){
                             if(hasGesture){
                               setState(() {
-                                center_on_location_update = CenterOnLocationUpdate.never;
+                                follow_on_location_update = AlignOnUpdate.never;
                               });
                             }
                           }
                         ),
                        children: [
-                         TileLayerWidget(
-                           options: TileLayerOptions(
-                             urlTemplate: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-                             subdomains: ['a', 'b', 'c'],
-                             maxZoom: 19,
-                             tileProvider: CachedTileProvider(
-                               customCacheManager: customCacheManager,
-                             )
-                           ),
+                         TileLayer(
+                           urlTemplate: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+                           maxZoom: 19,
+                           tileProvider: CachedTileProvider(
+                             customCacheManager: customCacheManager,
+                           )
                          ),
-                         LocationMarkerLayerWidget(
-                           plugin: LocationMarkerPlugin(
-                             centerCurrentLocationStream:center_current_location_StreamController.stream,
-                             centerOnLocationUpdate: center_on_location_update
-                           ),
-                           options: LocationMarkerLayerOptions(
+                         CurrentLocationLayer(
+                           // plugin: LocationMarkerPlugin(
+                           //   centerCurrentLocationStream:center_current_location_StreamController.stream,
+                           //   centerOnLocationUpdate: center_on_location_update
+                           // ),
+                           style: LocationMarkerStyle(
                              marker: DefaultLocationMarker(
                                color: Colors.green,
                                child: Icon(
@@ -408,55 +421,48 @@ class NavigationState extends State<Navigation> {
                              accuracyCircleColor: Colors.green.withOpacity(0.1),
                              headingSectorColor: Colors.green.withOpacity(0.8),
                              headingSectorRadius: 120,
-                             markerAnimationDuration: Duration(milliseconds: Duration.millisecondsPerSecond),
+                             // markerAnimationDuration: Duration(milliseconds: Duration.millisecondsPerSecond),
                            ),
+                           alignPositionStream: follow_current_location_StreamController.stream,
+                           alignPositionOnUpdate: follow_on_location_update,
                          ),
-                         TappablePolylineLayerWidget(
-                           options: TappablePolylineLayerOptions(
-                             polylineCulling: true,
-                             pointerDistanceTolerance: 20,
-                             polylines: [
-                               // getP()
-                               TaggedPolyline(
-                                 tag: 'My Polyline',
-                                 // An optional tag to distinguish polylines in callback
-                                 points: polylineCoordinates,//getCoordinates()== null ? 0 : getCoordinates(),//getPoints(1)getPoints(0)
-                                 color: Colors.red,
-                                 strokeWidth: 9.0,
-                               ),
-                             ],
-                             onTap: (polylines, tapPosition) => print('Tapped: ' + polylines.map((polyline) => polyline.tag).join(',') + 'at' + tapPosition.globalPosition.toString()),
-                             onMiss: (tapPosition){
-                               print('No polyline was tapped at position' + tapPosition.globalPosition.toString());
-                             }
-                           ),
-                         ),
-                         MarkerLayerWidget(
-                           options: MarkerLayerOptions(
-                             markers:
-                               polylineCoordinates.isNotEmpty == true
-                                   ?
-                               [
-                                 Marker(
-                                   width: 50,
-                                   height: 32,
-                                   point: polylineCoordinates[0],
-                                   builder: (_) {
-                                     return Image.asset('assets/marker_walking.png');
-                                   }),
-                                 Marker(
-                                   width: 50,
-                                   height: 32,
-                                   point: polylineCoordinates.last,
-                                   builder: (_) {
-                                     return Image.asset('assets/marker_standing.png', scale: 15,);
-                                   })
-                               ]
-                                   :
-                               [],
-                             rotate: true,
 
-                           )
+                         polylineCoordinates.isNotEmpty == true
+                             ?
+                         PolylineLayer(
+                           polylines: [
+                             Polyline(
+                                 points: polylineCoordinates,
+                                 color: Colors.red,
+                                 strokeWidth: 9.0
+                             )
+                           ],
+                           // simplificationTolerance: 0,
+                         )
+                             :
+                         Container(),
+
+                         MarkerLayer(
+                           markers:
+                             polylineCoordinates.isNotEmpty == true
+                                 ?
+                             [
+                               Marker(
+                                 width: 50,
+                                 height: 32,
+                                 point: polylineCoordinates.first,
+                                 child: Image.asset('assets/marker_walking.png')
+                               ),
+                               Marker(
+                                 width: 50,
+                                 height: 32,
+                                 point: polylineCoordinates.last,
+                                 child: Image.asset('assets/marker_standing.png', scale: 15,)
+                               )
+                             ]
+                                 :
+                             [],
+                           rotate: true,
                          ),
                        ],
                      ),
@@ -469,12 +475,19 @@ class NavigationState extends State<Navigation> {
                           Clipboard.setData(ClipboardData(text: "${lat},${lng}"));
                           Fluttertoast.showToast(msg: 'The coordinates are: X:$lat, Y:$lng and copied to clipboard', toastLength: Toast.LENGTH_LONG,gravity: ToastGravity.BOTTOM);
                         },
+                        onDoubleTap: (){
+                          setState(()   {
+                            newMapController.rotate(0);
+                            follow_on_location_update = AlignOnUpdate.always;
+                            follow_current_location_StreamController.add(18);
+                          });
+                        },
                         child: FloatingActionButton(
                           onPressed: (){
                             setState(() {
-                              center_on_location_update = CenterOnLocationUpdate.always;
+                              follow_on_location_update = AlignOnUpdate.always;
                             });
-                            center_current_location_StreamController.add(18);
+                            follow_current_location_StreamController.add(18);
                             // print('mikroooo');
                           },
                           child: Icon(
@@ -639,42 +652,6 @@ class NavigationState extends State<Navigation> {
                         ),
                       ),
                     ),
-                    // Positioned(
-                    //   left: 20,
-                    //   bottom: 20,
-                    //   child: FloatingActionButton(
-                    //     onPressed: () async {
-                    //       List<Map> lista = await SqlDatabase.instance.select_coor();
-                    //       //int ff = await SqlDatabase.instance.select_coor();
-                    //       //print(lista.length);
-                    //       for(int i=0;i<lista.length;i++){
-                    //         // polylineCoordinates.add(LatLng(values[0],values[1]));
-                    //         // print(polylineCoordinates);
-                    //         //print(lista[i]['lat']);
-                    //         //if(lista[i]['lat']!=0.0 && lista[i]['lng']!=0.0){
-                    //         polylineCoordinates.add(LatLng(lista[i]['lat'], lista[i]['lng']));
-                    //         print('Edom eimaim $i');
-                    //         //}
-                    //       }
-                    //     },
-                    //     child: FaIcon(
-                    //       FontAwesomeIcons.route,
-                    //       color: Colors.white
-                    //     ),
-                    //   ),
-                    // ),
-                    // Positioned(
-                    //   left:10,
-                    //   top: 10,
-                    //   child: Card(
-                    //     child: Padding(
-                    //       padding: const EdgeInsets.all(8.0),
-                    //       child: Text(
-                    //         '$date_show\nX:${lat}, Y:${lng}'
-                    //       ),
-                    //     ),
-                    //   ),
-                    // ),
                     SlidingUpPanel(
                       controller: panelController,
                       minHeight: size.height * 0.06,
@@ -722,6 +699,34 @@ class NavigationState extends State<Navigation> {
                                   )
                                 ]
                             ),
+                            SizedBox(height: size.height * 0.03),
+                            Center(
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Image.asset(
+                                    getActivityImage(currentActivity),
+                                    width: 40,
+                                    height: 40,
+                                  ),
+                                  SizedBox(width: 8),
+                                  Column(
+                                      children: [
+                                        const AutoSizeText(
+                                            'Current Activity',
+                                            minFontSize: 8,
+                                            maxFontSize: 14,
+                                            style: TextStyle(fontWeight: FontWeight.bold)
+                                        ),
+                                        Text(
+                                          currentActivity,
+                                          style: const TextStyle(fontSize: 14.0),
+                                        )
+                                      ]
+                                  )
+                                ],
+                              ),
+                            )
                           ],
                         ),
                       ),

@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:hive/hive.dart';
@@ -104,6 +105,163 @@ class _SettingsState extends State<Settings> {
     }
     else{
       return true;
+    }
+  }
+
+  //Function to check for valid file
+  Future<bool> isValidDatabaseFile(File file) async {
+    // List of expected table names in your database
+    const expectedTables = [
+      'coordinates',
+      'altitude',
+      'pressure',
+      'acceleration',
+      'gyroscope',
+      'magnetometer',
+      'proximity',
+      'daily_steps',
+      'sensors'
+    ];
+
+    // Check if the file is not empty
+    if (await file.length() == 0) {
+      Fluttertoast.showToast(
+        msg: 'The file is empty',
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.BOTTOM,
+      );
+      return false;
+    }
+
+    // Check if the file has the correct '.db' extension
+    if (!file.path.endsWith('.db')) {
+      Fluttertoast.showToast(
+        msg: 'The file is not a valid database file',
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.BOTTOM,
+      );
+      return false;
+    }
+
+    try {
+      final db = await openDatabase(file.path);
+
+      // Check each table
+      for (var tableName in expectedTables) {
+        final tableExistsResult = await db.rawQuery(
+            'SELECT name FROM sqlite_master WHERE type="table" AND name="$tableName";');
+
+        if (tableExistsResult.isEmpty) {
+          Fluttertoast.showToast(
+            msg: 'The database is missing required table: $tableName',
+            toastLength: Toast.LENGTH_SHORT,
+            gravity: ToastGravity.BOTTOM,
+          );
+          await db.close();
+          return false;
+        }
+      }
+
+      // All required tables are found
+      await db.close();
+      return true;
+    } catch (e) {
+      // If an exception occurs, the database file is not valid
+      Fluttertoast.showToast(
+        msg: 'Failed to open the database. Error: $e',
+        toastLength: Toast.LENGTH_LONG,
+        gravity: ToastGravity.BOTTOM,
+      );
+      return false;
+    }
+  }
+
+  //Function to upload database files with progress indicator
+  Future<void> uploadDatabase() async {
+    FilePickerResult? result = await FilePicker.platform.pickFiles();
+
+    if (result != null) {
+      File file = File(result.files.single.path!);
+
+      // Perform validation checks
+      bool isValid = await isValidDatabaseFile(file);
+      if (!isValid) return; // If not valid, return early
+
+      final dbPath = await getDatabasesPath();
+      String existingDbPath = '$dbPath/db.db';
+
+      try {
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (BuildContext context) {
+            return Center(child: CircularProgressIndicator());
+          },
+        );
+
+        final newDb = await openDatabase(file.path);
+        final existingDb = await openDatabase(existingDbPath);
+        bool hasNewEntries = false; // Flag to check if new entries were added
+
+        await existingDb.transaction((txn) async {
+          const tables = [
+            'coordinates', 'altitude', 'pressure', 'acceleration',
+            'gyroscope', 'magnetometer', 'proximity', 'daily_steps', 'sensors'
+          ];
+
+          for (String table in tables) {
+            List<Map> newEntries = await newDb.query(table);
+
+            for (var newEntry in newEntries) {
+              Map<String, Object?> castedEntry = newEntry.map((key, value) => MapEntry(key.toString(), value));
+
+              // Check for existing entry based on a primary key or unique identifier
+              var exists = await txn.query(table,
+                  where: 'id = ?', whereArgs: [castedEntry['id']]);
+
+              if (exists.isEmpty) {
+                // If the entry does not exist in the existing database, insert it
+                await txn.insert(table, castedEntry);
+                hasNewEntries = true; // Set flag to true if new entry is added
+              } else {
+                // Optional, handle the duplicate case (e.g., log it, update it, skip it)
+                print('Duplicate entry found for id: ${castedEntry['id']}');
+              }
+            }
+          }
+        });
+
+        await newDb.close();
+        await existingDb.close();
+
+        Navigator.pop(context); // Close the progress dialog
+        if (hasNewEntries) {
+          Fluttertoast.showToast(
+            msg: 'Database updated with new entries',
+            toastLength: Toast.LENGTH_SHORT,
+            gravity: ToastGravity.BOTTOM,
+          );
+        } else {
+          Fluttertoast.showToast(
+            msg: 'No new entries found. Database remains unchanged.',
+            toastLength: Toast.LENGTH_SHORT,
+            gravity: ToastGravity.BOTTOM,
+          );
+        }
+      } catch (e) {
+        Navigator.pop(context); // Close the progress dialog
+        Fluttertoast.showToast(
+          msg: 'Error updating database: $e',
+          toastLength: Toast.LENGTH_LONG,
+          gravity: ToastGravity.BOTTOM,
+        );
+      }
+    } else {
+      Fluttertoast.showToast(
+        msg: 'No file selected',
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.BOTTOM,
+      );
     }
   }
 
@@ -276,6 +434,9 @@ class _SettingsState extends State<Settings> {
                                   ),
                                   textAlign: TextAlign.justify,
                                 ),
+
+                                SizedBox(height: 16),
+
                                 TextField(
                                   maxLength: 5,
                                   controller: stepController,
@@ -286,6 +447,9 @@ class _SettingsState extends State<Settings> {
                                   ),
                                   keyboardType: TextInputType.number,
                                 ),
+
+                                SizedBox(height: 16),
+
                                 TextField(
                                   maxLength: 3,
                                   controller: heightController,
@@ -405,7 +569,21 @@ class _SettingsState extends State<Settings> {
                   Fluttertoast.showToast(msg: 'Successfully Copied DB', toastLength: Toast.LENGTH_SHORT,gravity: ToastGravity.BOTTOM);
                 },
               ),
-            )
+            ),
+            // Add this new card for the upload functionality
+            Card(
+              shadowColor: Colors.grey,
+              elevation: 10,
+              clipBehavior: Clip.antiAlias,
+              margin: const EdgeInsets.only(left: 10, right: 10, bottom: 10, top: 10),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(40),
+              ),
+              child: ListTile(
+                title: const Text('Upload DB from downloads folder'),
+                onTap: uploadDatabase,
+              ),
+            ),
           ],
         ),
       ),

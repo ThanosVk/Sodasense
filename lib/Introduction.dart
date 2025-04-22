@@ -21,7 +21,6 @@ class OnBoardingPageState extends State<OnBoardingPage> {
     );
   }
 
-
   Widget _buildImage(String assetName, [double width = 250]) {
     return Image.asset('assets/$assetName', width: width);
   }
@@ -104,7 +103,7 @@ class OnBoardingPageState extends State<OnBoardingPage> {
               _buildImage('sensors_screen.jpg'),
               SizedBox(height: 20),
               Text(
-                "This scren shows the total steps and readings of each available sensor.",
+                "This screen shows the total steps and readings of each available sensor.",
                 style: bodyStyle,
                 textAlign: TextAlign.center,
               ),
@@ -129,7 +128,6 @@ class OnBoardingPageState extends State<OnBoardingPage> {
           decoration: pageDecoration,
         ),
       ],
-
 
       onDone: () => _onIntroEnd(context),
       onSkip: () => _onIntroEnd(context), // You can override onSkip callback

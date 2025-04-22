@@ -37,17 +37,6 @@ class _SensorsState extends State<Sensors> {
   // int date = 0;
 
 
-  // static const press_channel = MethodChannel('pressure_sensor');
-  // static const prox_channel = MethodChannel('proximity_channel');
-  // static const acc_channel = MethodChannel('accelerometer_channel');
-  // static const gyro_channel = MethodChannel('gyroscope_channel');
-  // static const magn_channel = MethodChannel('magnetometer_channel');
-  //
-  // static const pressure_channel = EventChannel('pressure_channel');//Channel for comunicating with android
-  // StreamSubscription? pressureSubscription;
-
-  // Timer ?timer,timer_acc,timer_gyro,timer_magn,timer_press,timer_prox;
-
   @override
   void initState() {
     // TODO: implement initState
@@ -60,7 +49,7 @@ class _SensorsState extends State<Sensors> {
     check_magn_availability();
 
     //accelerometer initialization event
-    userAccelerometerEvents.listen((UserAccelerometerEvent event) {
+    userAccelerometerEventStream().listen((UserAccelerometerEvent event) {
       setState(() {
         if(acc_check == true){
           ax = event.x;
@@ -76,7 +65,7 @@ class _SensorsState extends State<Sensors> {
     });
 
     //gyroscope initialization event
-    gyroscopeEvents.listen((GyroscopeEvent event) {
+    gyroscopeEventStream().listen((GyroscopeEvent event) {
       setState(() {
         if(gyro_check == true) {
           gx = event.x;
@@ -92,7 +81,7 @@ class _SensorsState extends State<Sensors> {
     });
 
     //magnetometer initialization event
-    magnetometerEvents.listen((MagnetometerEvent event) {
+    magnetometerEventStream().listen((MagnetometerEvent event) {
       setState(() {
         if(magn_check == true){
           mx = event.x;
@@ -131,31 +120,6 @@ class _SensorsState extends State<Sensors> {
       });
     });
 
-    // if(box.get('sensors_sr')!=null){
-    //   srt = box.get('sensors_sr');
-    // }
-    // timer = Timer.periodic(Duration(seconds: srt), (Timer t) {
-    //
-    //   if(acc_check == true){
-    //     insert_acc_toDb();
-    //   }
-    //   if(gyro_check == true){
-    //     insert_gyro_toDb();
-    //   }
-    //   if(magn_check == true){
-    //     insert_magn_toDb();
-    //   }
-    //   if(press_check == true){
-    //     insert_pressure_toDb();
-    //   }
-    //   if(prox_check == true){
-    //     insert_prox_toDb();
-    //   }
-    //   //check();
-    //
-    // });
-
-
     setState(() {
       get_steps();
     });
@@ -169,7 +133,7 @@ class _SensorsState extends State<Sensors> {
 
   }
 
-  //Future for gettind data from proximity sensor
+  //Future for getting data from proximity sensor
   Future<void> listenSensor() async {
     FlutterError.onError = (FlutterErrorDetails details) {
       if (foundation.kDebugMode) {
@@ -276,41 +240,6 @@ class _SensorsState extends State<Sensors> {
     }
   }
 
-  // //function for inserting to the database the pressure data
-  // void insert_pressure_toDb() async{
-  //   date = DateTime.now().millisecondsSinceEpoch;
-  //   await SqlDatabase.instance.insert_pressure(date,pressure,0);
-  //   //print('KOMPLE TO PRESS');
-  // }
-  //
-  // //function for inserting to the database the acceleration data
-  // void insert_acc_toDb() async{
-  //   date = DateTime.now().millisecondsSinceEpoch;
-  //   await SqlDatabase.instance.insert_acc(date, ax, ay, az, 0);
-  //   //print('KOMPLE TO ACC');
-  // }
-  //
-  // //function for inserting to the database the gyroscope data
-  // void insert_gyro_toDb() async{
-  //   date = DateTime.now().millisecondsSinceEpoch;
-  //   await SqlDatabase.instance.insert_gyro(date, gx, gy, gz, 0);
-  //   //print('KOMPLE TO GYRO');
-  // }
-  //
-  // //function for inserting to the database the magnetometer data
-  // void insert_magn_toDb() async{
-  //   date = DateTime.now().millisecondsSinceEpoch;
-  //   await SqlDatabase.instance.insert_magn(date,mx,my,mz,0);
-  //   //print('KOMPLE TO MAGN');
-  // }
-  //
-  // //function for inserting to the database the proximity data
-  // void insert_prox_toDb() async{
-  //   date = DateTime.now().millisecondsSinceEpoch;
-  //   await SqlDatabase.instance.insert_prox(date, "$nmsg", 0);
-  //   //print('KOMPLE TO PROX');
-  // }
-
   void check() async{
     List<Map> lista = await SqlDatabase.instance.select_acc();
     print(lista);
@@ -368,150 +297,6 @@ class _SensorsState extends State<Sensors> {
                 ),
               ],
             ),
-           // child: Column(
-           //     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-           //     children: [
-           //       // ListView(
-           //       //   children: [
-           //       //     Container(
-           //       //       width: 30,
-           //       //       height: 25,
-           //       //       child: Text('Total count of steps', style: TextStyle(fontSize: 18.0,fontWeight: FontWeight.bold)),
-           //       //     ),
-           //       //     Container(
-           //       //       width: 30,
-           //       //       height: 25,
-           //       //       child: ttl_stps == 0 ? Text('-') : Text('$ttl_stps'),
-           //       //     )
-           //       //   ],
-           //       // ),
-           //       // Row(
-           //       //     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-           //       //     children: [
-           //       //       Column(
-           //       //           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-           //       //           children: [
-           //       //             Text('Total count of steps', style: TextStyle(fontSize: 18.0,fontWeight: FontWeight.bold)),
-           //       //           ]
-           //       //       ),
-           //       //       Column(
-           //       //           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-           //       //           children: [
-           //       //             ttl_stps == 0 ? Text('-') : Text('$ttl_stps')
-           //       //           ]
-           //       //       )
-           //       //     ]
-           //       // ),
-           //       // Row(
-           //       //     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-           //       //     children: [
-           //       //       Column(
-           //       //           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-           //       //           children: [
-           //       //             Text('Pressure', style: TextStyle(fontSize: 18.0,fontWeight: FontWeight.bold)),
-           //       //           ]
-           //       //       ),
-           //       //       Column(
-           //       //           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-           //       //           children: [
-           //       //             Text(pmsg)
-           //       //           ]
-           //       //       )
-           //       //     ]
-           //       // ),
-           //       // Row(
-           //       //     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-           //       //     children: [
-           //       //       Column(
-           //       //           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-           //       //           children: [
-           //       //             Text('Total count of steps', style: TextStyle(fontSize: 18.0,fontWeight: FontWeight.bold)),
-           //       //           ]
-           //       //       ),
-           //       //       Column(
-           //       //           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-           //       //           children: [
-           //       //             ttl_stps == 0 ? Text('-') : Text('$ttl_stps')
-           //       //           ]
-           //       //       )
-           //       //     ]
-           //       // ),
-           //       // Row(
-           //       //     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-           //       //     children: [
-           //       //       Column(
-           //       //           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-           //       //           children: [
-           //       //             Text('Total count of steps', style: TextStyle(fontSize: 18.0,fontWeight: FontWeight.bold)),
-           //       //           ]
-           //       //       ),
-           //       //       Column(
-           //       //           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-           //       //           children: [
-           //       //             ttl_stps == 0 ? Text('-') : Text('$ttl_stps')
-           //       //           ]
-           //       //       )
-           //       //     ]
-           //       // ),
-           //       Row(
-           //          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-           //          children: [
-           //            Column(
-           //                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-           //                children: [
-           //                  Text('Total count of steps', style: TextStyle(fontSize: 18.0,fontWeight: FontWeight.bold)),
-           //                  ttl_stps == 0 ? Text('-') : Text('$ttl_stps')
-           //                ]
-           //            ),
-           //            Column(
-           //                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-           //                children: [
-           //                  Text('Pressure', style: TextStyle(fontSize: 18.0,fontWeight: FontWeight.bold)),
-           //                  Text(pmsg)
-           //                ]
-           //            )
-           //          ]
-           //        ),
-           //       Row(
-           //           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-           //           children: [
-           //             Column(
-           //                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-           //                 children: [
-           //                   Text('Accelerometer', style: TextStyle(fontSize: 18.0,fontWeight: FontWeight.bold)),
-           //                   Text(amsg)
-           //                 ]
-           //             ),
-           //             Column(
-           //                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-           //                 children: [
-           //                   Text('Gyroscope', style: TextStyle(fontSize: 18.0,fontWeight: FontWeight.bold)),
-           //                   Text(gmsg)
-           //                 ]
-           //             )
-           //           ]
-           //       ),
-           //       Row(
-           //           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-           //           children: [
-           //             Column(
-           //                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-           //                 children: [
-           //                   Text('Magnetometer', style: TextStyle(fontSize: 18.0,fontWeight: FontWeight.bold)),
-           //                   Text(mmsg)
-           //                 ]
-           //             ),
-           //             Column(
-           //                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-           //                 children: [
-           //                   Text('Is anything near?', style: TextStyle(fontSize: 18.0,fontWeight: FontWeight.bold)),
-           //                   Text('${nmsg.replaceAll("'","")}')
-           //                 ]
-           //             )
-           //           ]
-           //       ),
-           //     ],
-           //   )
           ),
         ),
     );

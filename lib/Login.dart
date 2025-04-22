@@ -1,12 +1,11 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:internet_connection_checker/internet_connection_checker.dart';
+import 'package:internet_connection_checker_plus/internet_connection_checker_plus.dart';
 import 'package:thesis/Signup.dart';
 import 'package:thesis/main.dart';
 import 'package:thesis/PassReset.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
-import 'package:mongo_dart/mongo_dart.dart' as mongo;
 import 'package:email_validator/email_validator.dart';
 import 'package:hive/hive.dart';
 import 'package:http/http.dart' as http;
@@ -29,7 +28,6 @@ class LoginState extends State<Login> {
   //bool is_checked = false;//for the checkbox of remember me
   bool hasInternet =false;//for checking if the device is connected to the internet
   var connectivityresult;//variable for checking if the wifi or the cellular of the device is enabled
-  mongo.Db db = mongo.Db('mongodb://10.0.2.2:27017/App');//Target Database
   String access_token='';
 
 
@@ -152,10 +150,8 @@ class LoginState extends State<Login> {
     //WillPopScope is a method for handling back button
     return WillPopScope(
       onWillPop: () async {
-
-        // final popup = await showWarning(context);
-
-        return false;
+        final shouldCloseApp = await showWarning(context);
+        return shouldCloseApp ?? false;
       },
       child: Scaffold(
           resizeToAvoidBottomInset : true,
@@ -190,11 +186,16 @@ class LoginState extends State<Login> {
                       controller: mail_txtController,
                       decoration: InputDecoration(
                         labelText: "Email",
+                        floatingLabelStyle: TextStyle(color: Colors.cyan),
                         errorText: mail_validate ? null : Mail_Textfield_check(),
+                        // focusedBorder: UnderlineInputBorder(
+                        //   borderSide: BorderSide(color: Colors.cyan),
+                        // ),
                       ),
                       onChanged: (text) => setState(() {
                         mail_validate = mail_error_msg();
                       }),
+                      cursorColor: Colors.cyan,
                     ),
                   ),
 
@@ -207,7 +208,11 @@ class LoginState extends State<Login> {
                       controller: pass_txtController,
                       decoration: InputDecoration(
                         labelText: "Password",
+                        floatingLabelStyle: TextStyle(color: Colors.cyan),
                         errorText: pass_validate ? null : Pass_Textfield_check(),
+                        // focusedBorder: UnderlineInputBorder(
+                        //   borderSide: BorderSide(color: Colors.cyan),
+                        // ),
                         suffix: InkWell(
                           onTap: ChangeView,
                           child: Icon(pass_hidden ? Icons.visibility_off : Icons.visibility),
@@ -217,46 +222,9 @@ class LoginState extends State<Login> {
                         pass_validate = pass_error_msg();
                       }),
                       obscureText: pass_hidden,
+                      cursorColor: Colors.cyan,
                     ),
                   ),
-
-                  //σε περιπτωση που χρειαστω remember me
-                  // Container(
-                  //   alignment: Alignment.centerRight,
-                  //   margin: EdgeInsets.symmetric(horizontal: 40, vertical: 10),
-                  //   child: Row(
-                  //     children: [
-                  //       Text('Remember me',
-                  //           style: TextStyle(
-                  //               fontSize: 12,
-                  //               fontWeight: FontWeight.bold,
-                  //               color: Color(0xFF2661FA))
-                  //       ),
-                  //       Checkbox(
-                  //         value: is_checked,
-                  //         onChanged: (value){
-                  //           setState(() {
-                  //             is_checked = !is_checked;
-                  //           });
-                  //         },
-                  //       ),
-                  //       Spacer(flex: 3),
-                  //       GestureDetector(
-                  //         onTap: () => {
-                  //           Navigator.push(context, MaterialPageRoute(builder: (context) => PassReset()))
-                  //         },
-                  //         child: Text(
-                  //           "Forgot your password?",
-                  //           style: TextStyle(
-                  //               fontSize: 12,
-                  //               fontWeight: FontWeight.bold,
-                  //               color: Color(0xFF2661FA)
-                  //           ),
-                  //         ),
-                  //       ),
-                  //     ],
-                  //   ),
-                  // ),
 
                   Container(
                     alignment: Alignment.centerRight,
@@ -284,33 +252,12 @@ class LoginState extends State<Login> {
                     child: ElevatedButton(
                       onPressed: () async {
                         connectivityresult = await Connectivity().checkConnectivity();
-                        hasInternet = await InternetConnectionChecker().hasConnection;
+                        hasInternet = await InternetConnection().hasInternetAccess;
                         print(connectivityresult);
-                        if((connectivityresult == ConnectivityResult.mobile || connectivityresult == ConnectivityResult.wifi) && hasInternet == true){
+                        if((connectivityresult.contains(ConnectivityResult.mobile) == true || connectivityresult.contains(ConnectivityResult.wifi) == true) && hasInternet == true){
                           if(mail_check==false || pass_check==false){
                             Fluttertoast.showToast(msg: 'Please check your credentials',toastLength: Toast.LENGTH_SHORT,gravity: ToastGravity.BOTTOM);
                           }
-                          // else{
-                          //   await db.open();
-                          //   mongo.DbCollection users = db.collection('users');
-                          //   print('Connected to database!');
-                          //   var logeduser = await users.findOne(mongo.where.eq('e-mail',mail_txtController.text));
-                          //   if(logeduser != null){
-                          //     var salt = logeduser['Salt'];
-                          //     var hashed_pass = SignupState().HashPassword(pass_txtController.text, salt);
-                          //
-                          //     if(hashed_pass == logeduser['Hashed password']){
-                          //       var box = Hive.box('user');
-                          //       StartScreen().user.email = mail_txtController.text;
-                          //       box.put('email',StartScreen().user.email);
-                          //       box.put('pass',pass_txtController.text);
-                          //       Navigator.push(context, MaterialPageRoute(builder: (context) => MyHomePage()));
-                          //     }
-                          //     else{
-                          //       Fluttertoast.showToast(msg: 'Incorrect email or password', toastLength: Toast.LENGTH_SHORT,gravity: ToastGravity.BOTTOM);
-                          //     }
-                          //   }
-                          // }
                           else{
                             //response is for connecting with keycloak and sending the username and password
                             var response = await http.post(Uri.parse('https://api.sodasense.uop.gr/v1/userLogin'),
@@ -360,19 +307,10 @@ class LoginState extends State<Login> {
                               // print(access_token.length);
                               // print(response.body.length);
                               await box.put('access_token', access_token);
-                              // print('Akolouthei to token 0');
-                              // print(token_parts[0]);
-                              // print('Akolouthei to token 1');
-                              // print(token_parts[1]);
-                              // print('Akolouthei to token 2');
-                              // print(token_parts[2]);
                               print('Akolouthei to diko mou');
                               print(access_token);
                               print('To access_token einai styl ${access_token.runtimeType}');
-                              // print(tmp2.length);
                               print(access_token.length);
-                              // print('Decode tokens:');
-                              // print(decoded_token);
                               print('.'.allMatches(response.body).length);
                               print('olo to response body');
                               for(int i=0; i<token_parts.length;i++){
@@ -384,42 +322,7 @@ class LoginState extends State<Login> {
                               for(int i=0; i<tmp.length;i++){
                                 print('$i, ${tmp[i]}');
                               }
-                              print('NAIIIIIIIIIIIIIII');
                               print(box.get('access_token'));
-                              // print('SKETO $jsontext');
-                              // print('OXI SKETO ${utf8.decode(jsontext)}');
-                              // if(newe['sub'] =='c91b50ed-44a9-45ca-ba85-85d0567dac8b'){
-                              //   print('NAI EINAI IDIO222');
-                              //   print(newe['sub']);
-                              //   print(token_parts[0]);
-                              //   print(token_parts[1]);
-                              // }
-
-                              // mongo.Db db = mongo.Db('mongodb://root:soda-Popsicle-2022@sodasense.uop.gr/Sodasense?authSource=admin');
-                              // await db.open();
-                              // print(db.isConnected);
-                              // if (db.isConnected == true){
-                              //   print('Connected to database!');
-                              // }
-                              // else{
-                              //   print('Not connected to the database');
-                              // }
-                              // mongo.DbCollection users = db.collection('users');
-                              // await users.insertOne({
-                              //   "username" : mail_txtController.text,
-                              //   "password" : pass_txtController.text
-                              // });
-
-                              // var newww = await users.insertOne({
-                              //   "username" : "tns",
-                              //   "Sdgsfdgdf": "Sfdgsfdgsdf"
-                              // });
-                              //
-                              // if (newww.isSuccess == false) {
-                              //   print('Error detected in record insertion');
-                              // }
-                              //
-                              // print('${newww.writeError},${newww.errmsg}');
                               Navigator.push(context, MaterialPageRoute(builder: (context) => MyHomePage()));
                             }
                           }
@@ -428,7 +331,9 @@ class LoginState extends State<Login> {
                           Fluttertoast.showToast(msg: 'Please connect to the internet', toastLength: Toast.LENGTH_SHORT,gravity: ToastGravity.BOTTOM);
                         }
                       },
-                      style: ElevatedButton.styleFrom(foregroundColor: Colors.white,
+                      style: ElevatedButton.styleFrom(
+                          foregroundColor: Colors.white,
+                          backgroundColor: Colors.cyan,
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(80.0)),
                           padding: const EdgeInsets.all(0)),
                       child: Container(
@@ -439,9 +344,7 @@ class LoginState extends State<Login> {
                         child: Text(
                           "LOGIN",
                           textAlign: TextAlign.center,
-                          style: TextStyle(
-                              fontWeight: FontWeight.bold
-                          ),
+                          style: TextStyle(fontWeight: FontWeight.bold),
                         ),
                       ),
                     ),

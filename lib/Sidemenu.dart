@@ -85,9 +85,8 @@ class Sidemenu extends StatelessWidget {
                 title: Text('Logout'),
                 content: Text('Are you sure you want to exit?'),
                 actions: [
-                  ElevatedButton(onPressed: () => {
-                    Navigator.pop(context)
-                  },child: Text('No')),
+                  ElevatedButton(onPressed: () => {Navigator.pop(context)},
+                      child: Text('No')),
                   ElevatedButton(onPressed: () async {
                     await StartScreen().stopForegroundTask();
                     //await LoginState().db.close();

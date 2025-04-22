@@ -154,8 +154,7 @@ class EditProfileState extends State<EditProfile> {
                       "CANCEL",
                       style: TextStyle(
                         fontSize: 15,
-                        letterSpacing: 2,
-                        color: Colors.black,
+                        letterSpacing: 2
                       ),
                     ),
                     style: OutlinedButton.styleFrom(
@@ -167,7 +166,6 @@ class EditProfileState extends State<EditProfile> {
                   ),
                   ElevatedButton(
                     onPressed: () async {
-                      String updatedName = fullNameController.text;
                       String updatedEmail = emailController.text;
                       String updatedUsername = fullNameController.text; // Use the same text as for full name
                       String updatedPassword = passwordController.text;
@@ -177,15 +175,6 @@ class EditProfileState extends State<EditProfile> {
                         _showMessageToUser('Invalid email format', Colors.red);
                         return;
                       }
-
-                      /*var response = await http.post(
-                        Uri.parse('http://192.168.48.222/fake-api/editprofile.php'),
-                        body: {
-                          'newUsername': updatedUsername,
-                          'newEmail': updatedEmail,
-                          'newPassword': updatedPassword,
-                        },
-                      );*/
                       final response = await http.post(
                         Uri.parse('http://192.168.48.222/fake-api/editprofile.php'),
                         headers: <String, String>{
@@ -216,7 +205,7 @@ class EditProfileState extends State<EditProfile> {
                       ),
                     ),
                     style: ElevatedButton.styleFrom(
-                      primary: Colors.cyan,
+                      backgroundColor: Colors.cyan,
                       padding: const EdgeInsets.symmetric(horizontal: 50),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(20),

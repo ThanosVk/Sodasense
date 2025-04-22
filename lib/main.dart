@@ -1,9 +1,10 @@
 import 'dart:convert';
+import 'dart:math';
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:internet_connection_checker/internet_connection_checker.dart';
+import 'package:internet_connection_checker_plus/internet_connection_checker_plus.dart';
 import 'package:liquid_progress_indicator_v2/liquid_progress_indicator.dart';
 import 'package:pedometer/pedometer.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -22,12 +23,10 @@ import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'dart:isolate';
 import 'package:hive/hive.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import 'package:thesis/User.dart';
 import 'package:thesis/Navigation.dart';
 import 'dart:io';
 import 'package:thesis/SqlDatabase.dart';
 import 'package:intl/intl.dart';
-import 'package:flutter_offline/flutter_offline.dart';
 import 'dart:async';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:http/http.dart' as http;
@@ -53,16 +52,6 @@ void main() async{
   runApp(MyApp());
 }
 
-// Future check_session(BuildContext? context) async {
-//   String? mail = await SecureStorage.get_email();
-//   String? pass = await SecureStorage.get_pass();
-//   screen = Login();
-//   if(mail != null && pass!=null) {
-//     screen = MyHomePage();
-//   }
-//   await Future.delayed(Duration(seconds: 2));
-// }
-
 void check_session() async{
   saved_mail = await box.get('email');
   saved_pass = await box.get('pass');
@@ -71,56 +60,49 @@ void check_session() async{
 bool isDarkMode = false;//check if dark mode is enabled
 
 // The callback function should always be a top-level function.
+@pragma('vm:entry-point')
 void startCallback() {
   // The setTaskHandler function must be called to handle the task in the background.
-  FlutterForegroundTask.setTaskHandler(MyTaskHandler());
+  FlutterForegroundTask.setTaskHandler(FirstTaskHandler());
 }
 
-class MyTaskHandler extends TaskHandler {
+class FirstTaskHandler extends TaskHandler {
   SendPort? _sendPort;
-  int _eventCount = 0;
 
+  // Called when the task is started.
   @override
-  Future<void> onStart(DateTime timestamp, SendPort? sendPort) async {
-    _sendPort = sendPort;
+  Future<void> onStart(DateTime timestamp, TaskStarter starter) async {
 
+    // _sendPort = sendPort;
     // You can use the getData function to get the stored data.
     final customData = await FlutterForegroundTask.getData<String>(key: 'customData');
     // print('customData: $customData');
   }
 
+  // Called every [interval] milliseconds in [ForegroundTaskOptions].
   @override
-  Future<void> onEvent(DateTime timestamp, SendPort? sendPort) async {
-    // FlutterForegroundTask.updateService(
-    //     notificationTitle: 'MyTaskHandler',
-    //     notificationText: 'eventCount: $_eventCount'
-    // );
-
+  Future<void> onRepeatEvent(DateTime timestamp) async {
     // Send data to the main isolate.
-    sendPort?.send(_eventCount);
-
-    _eventCount++;
+    // sendPort?.send(timestamp);
   }
 
+  // Called when the notification button on the Android platform is pressed.
   @override
-  Future<void> onDestroy(DateTime timestamp, SendPort? sendPort) async {
-    // You can use the clearAllData function to clear all the stored data.
+  Future<void> onDestroy(DateTime timestamp) async {
     await FlutterForegroundTask.clearAllData();
   }
 
+  // Called when the notification button on the Android platform is pressed.
   @override
-  void onButtonPressed(String id) {
-    // Called when the notification button on the Android platform is pressed.
-    // print('onButtonPressed >> $id');
+  void onNotificationButtonPressed(String id) {
+    // print('onNotificationButtonPressed >> $id');
   }
 
+  // Called when the notification itself on the Android platform is pressed.
+  // "android.permission.SYSTEM_ALERT_WINDOW" permission must be granted for
+  // this function to be called.
   @override
   void onNotificationPressed() {
-    // Called when the notification itself on the Android platform is pressed.
-    //
-    // "android.permission.SYSTEM_ALERT_WINDOW" permission must be granted for
-    // this function to be called.
-
     // Note that the app will only route to "/resume-route" when it is exited so
     // it will usually be necessary to send a message through the send port to
     // signal it to restore state when the app is already started.
@@ -178,25 +160,21 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver{
   double steps_length=0,dist=0;//steps_length for finding the exact meters per user height,dist for distance in km
   late Stream<StepCount> _stepCountStream;
   late Stream<PedestrianStatus> _pedestrianStatusStream;
-  String _status = '', steps = '0';
+  String steps = '0';
   int numsteps=0, sum_steps=0;
   bool hasPermissions = false,height_check=false;//hasPermissions for knowing if the device has permissions for activity sensor,height_check to know if height Textfield contains something
   bool height_validate=true;// height_validate for height validate textfield
   late List<bool> isSelected = [true, false];//isSelected for gender toggle buttons
-  User user = new User();
 
   // String date = DateFormat('dd-MM-yyyy-HH-mm-ss').format(DateTime.now());
   //Date for using date in the database
   int date = 0;
-
+  int maxYAxisValue = 100;
   String date_once = DateFormat('dd-MM-yyyy').format(DateTime.now());
-
-  ConnectivityResult connectionStatus = ConnectivityResult.none;
+  List<ConnectivityResult> connectionStatus = [ConnectivityResult.none];
   final Connectivity connectivity = Connectivity();
-  late StreamSubscription<ConnectivityResult> connectivitySubscription;
+  late StreamSubscription<List<ConnectivityResult>> connectivitySubscription;
   bool hasInternet =false;//for checking if the device is connected to the internet
-
-  //var box = Hive.box('user').add(user);
 
   ReceivePort? _receivePort;
 
@@ -246,18 +224,13 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver{
         channelDescription:'This notification appears when the foreground service is running.',
         channelImportance: NotificationChannelImportance.LOW,
         priority: NotificationPriority.LOW,
-        iconData: const NotificationIconData(
-          resType: ResourceType.mipmap,
-          resPrefix: ResourcePrefix.ic,
-          name: 'launcher',
-        ),
       ),
       iosNotificationOptions: const IOSNotificationOptions(
         showNotification: true,
         playSound: true
       ),
-      foregroundTaskOptions: const ForegroundTaskOptions(
-        interval: 1000,
+      foregroundTaskOptions: ForegroundTaskOptions(
+        eventAction: ForegroundTaskEventAction.repeat(1000),
         autoRunOnBoot: false,
         allowWifiLock: true,
       ),
@@ -266,36 +239,43 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver{
     );
   }
 
-  Future<bool> startForegroundTask() async {
+  Future<void> startForegroundTask() async {
     // You can save data using the saveData function.
     await FlutterForegroundTask.saveData(key: 'customData', value: 'hello');
 
-    bool reqResult;
+    // Register the receivePort before starting the service.
+    final ReceivePort? receivePort = FlutterForegroundTask.receivePort;
+    final bool isRegistered = registerReceivePort(receivePort);
+    if (!isRegistered) {
+      print('Failed to register receivePort!');
+      return;
+    }
+
+    ServiceRequestResult requestResult;
+
     if (await FlutterForegroundTask.isRunningService) {
-      reqResult = await FlutterForegroundTask.restartService();
+      requestResult = await FlutterForegroundTask.restartService();
     } else {
-      reqResult = await FlutterForegroundTask.startService(
+      requestResult = await FlutterForegroundTask.startService(
         notificationTitle: 'App is running on the background',
         notificationText: 'Tap to return to the app',
         callback: startCallback,
+        // notificationIcon: const NotificationIconData(
+        //   resType: ResourceType.mipmap,
+        //   resPrefix: ResourcePrefix.ic,
+        //   name: 'notification',
+        // ),
       );
     }
 
-    ReceivePort? receivePort;
-    if (reqResult) {
-      receivePort = await FlutterForegroundTask.receivePort;
-    }
-
-    return _registerReceivePort(receivePort);
-
   }
 
 
-  Future<bool> stopForegroundTask() async {
-    return await FlutterForegroundTask.stopService();
+  Future<ServiceRequestResult> stopForegroundTask() {
+    return FlutterForegroundTask.stopService();
   }
 
-  bool _registerReceivePort(ReceivePort? receivePort) {
+  bool registerReceivePort(ReceivePort? receivePort) {
     closeReceivePort();
 
     if (receivePort != null) {
@@ -323,8 +303,6 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver{
     _receivePort = null;
   }
 
-  T? _ambiguate<T>(T? value) => value;
-
   //For getting steps from stepController
   int stepscount(){
     return steps_count;
@@ -335,15 +313,39 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver{
     return height_count;
   }
 
+  // //setupLocationListener for registering the changes of location
+  // void setupLocationListener() {
+  //   if (box.get('GPS') == true) {
+  //     location.onLocationChanged.listen((loc.LocationData cLoc) {
+  //       // Check if widget is still in the tree
+  //       if (!mounted) return;
+  //
+  //       setState(() {
+  //         currentLocation = cLoc;
+  //         setpoint(cLoc.latitude, cLoc.longitude);
+  //       });
+  //
+  //       // Check if speed is more than 1.5 km/h (converting speed from m/s to km/h by multiplying by 3.6)
+  //       if (cLoc.speed != null && (cLoc.speed! * 3.6) > 1.5) {
+  //         insert_toDb_GPS();
+  //         print('GPS data recorded: ${cLoc.latitude}, ${cLoc.longitude}, Speed: ${cLoc.speed! * 3.6} km/h');
+  //       } else {
+  //         print('Speed is below 1.5 km/h, current speed: ${cLoc.speed! * 3.6} km/h');
+  //       }
+  //     });
+  //   }
+  // }
+
   @override
   void initState() {
     super.initState();
 
     WidgetsBinding.instance.addObserver(this);
-
     initForegroundTask();
     startForegroundTask();
     FlutterForegroundTask.requestIgnoreBatteryOptimization();
+
+    // setupLocationListener();
 
     if((box.get('date') != date_once) && (box.get('date') != null)){
       insert_toDb();
@@ -375,8 +377,11 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver{
     check_gyro_availability();
     check_magn_availability();
 
+    // Fetch weekly steps data
+    // fetchWeeklyStepsData();
+
     //accelerometer initialization event
-    userAccelerometerEvents.listen((UserAccelerometerEvent event) {
+    userAccelerometerEventStream().listen((UserAccelerometerEvent event) {
       if(acc_check == true){
         ax = event.x;
         ay = event.y;
@@ -390,7 +395,7 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver{
     });
 
     //gyroscope initialization event
-    gyroscopeEvents.listen((GyroscopeEvent event) {
+    gyroscopeEventStream().listen((GyroscopeEvent event) {
       if(gyro_check == true) {
         gx = event.x;
         gy = event.y;
@@ -404,7 +409,7 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver{
     });
 
     //magnetometer initialization event
-    magnetometerEvents.listen((MagnetometerEvent event) {
+    magnetometerEventStream().listen((MagnetometerEvent event) {
       if(magn_check == true){
         mx = event.x;
         my = event.y;
@@ -444,7 +449,7 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver{
       // print('Oi aisthitires einai $amsg, $gmsg, $mmsg, $pmsg, $nmsg');
 
       if(acc_check == true){
-        insert_acc_toDb();
+        // insert_acc_toDb();
       }
       else{
         ax=0;
@@ -452,7 +457,7 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver{
         az=0;
       }
       if(gyro_check == true){
-        insert_gyro_toDb();
+        // insert_gyro_toDb();
       }
       else{
         gx=0;
@@ -460,7 +465,7 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver{
         gz=0;
       }
       if(magn_check == true){
-        insert_magn_toDb();
+        // insert_magn_toDb();
       }
       else{
         mx=0;
@@ -468,17 +473,15 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver{
         mz=0;
       }
       if(press_check == true){
-        insert_pressure_toDb();
+        // insert_pressure_toDb();
       }
       else{
         pressure=0;
       }
       if(prox_check == true){
-        insert_prox_toDb();
+        // insert_prox_toDb();
       }
       insert_sensors_toDb();
-      //check();
-      // print('I ekxorisi egine sosta!');
 
     });
 
@@ -486,14 +489,31 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver{
 
     // fetchPermissionStatusGPS();
 
+    // if(box.get('GPS')==true){
+    //   location.onLocationChanged.listen((loc.LocationData cLoc) {
+    //
+    //     currentLocation = cLoc;
+    //     setpoint(cLoc.latitude, cLoc.longitude);
+    //
+    //     insert_toDb_GPS();
+    //     print('Oi suntetagmenes einai $lat, $lng');
+    //
+    //   });
+    // }
+
     if(box.get('GPS')==true){
       location.onLocationChanged.listen((loc.LocationData cLoc) {
 
         currentLocation = cLoc;
         setpoint(cLoc.latitude, cLoc.longitude);
 
-        insert_toDb_GPS();
-        print('Oi suntetagmenes einai $lat, $lng');
+        // Check if speed is more than 1.5 km/h (converting speed from m/s to km/h by multiplying by 3.6)
+        if (cLoc.speed != null && (cLoc.speed! * 3.6) > 1.5) {
+          insert_toDb_GPS();
+          print('GPS data recorded: ${cLoc.latitude}, ${cLoc.longitude}, Speed: ${cLoc.speed! * 3.6} km/h');
+        } else {
+          print('Speed is below 1.5 km/h, current speed: ${cLoc.speed! * 3.6} km/h');
+        }
 
       });
     }
@@ -504,6 +524,7 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver{
     });
 
     _tooltip = TooltipBehavior(enable: true);
+    fetchWeeklyStepsData();
   }
 
   @override
@@ -515,12 +536,44 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver{
     stepController.dispose();
     heightController.dispose();
     closeReceivePort();
-
     _streamSubscription.cancel();
 
-    //Hive.close(); den xreiazetai aparaitita
-
     super.dispose();
+  }
+
+  ///Further testing required
+  // Method to fetch weekly steps data
+  void fetchWeeklyStepsData() async {
+    List<Map<String, dynamic>> stepsData = await SqlDatabase.instance.select_steps_for_current_week();
+
+    // Process the fetched data to get step counts for each day of the current week
+    Map<String, int> weeklySteps = {};
+    stepsData.forEach((data) {
+      DateTime date = DateTime.fromMillisecondsSinceEpoch(data['date'] as int, isUtc: true).toLocal();
+      String dayOfWeek = DateFormat('EEE').format(date); // Three-letter day abbreviation
+      int steps = data['steps'] as int;
+      weeklySteps[dayOfWeek] = steps;
+      print("Fetched data - Date: ${date.toString()}, Day: $dayOfWeek, Steps: $steps"); // Logging
+    });
+
+    // Update the state to reflect the new data
+    setState(() {
+      generateData(weeklySteps);
+    });
+  }
+
+  ///Further testing required
+  void refreshData() async {
+    // Refresh the steps data by day
+    await getStepsByDay();
+
+    // Fetch other necessary data
+    fetchWeeklyStepsData();
+
+    // Update the state to refresh the UI
+    setState(() {
+      // Here we can update other state variables if needed, check if it is, well, needed. Further testing required.
+    });
   }
 
   @override
@@ -533,6 +586,8 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver{
 
 
     if(state == AppLifecycleState.resumed){
+      // App has come to the foreground, refresh data here
+      refreshData();
       NavigationState().location.enableBackgroundMode(enable:false);
       print('Seen by the user');
     }
@@ -569,20 +624,23 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver{
     print(event);
     steps_db = event.steps;
     setState(() {
-      if(box.get('today_steps')==null){
+      if(box.get('today_steps') == null){
         box.put('today_steps',0);
       }
       else{
-        //numsteps++;
-        //sum_steps = box.get('today_steps') + numsteps;
         box.put('today_steps',box.get('today_steps') + 1);
         dist = double.parse(((box.get('today_steps') * box.get('steps_length'))/ 1000).toStringAsFixed(3));//(box.get('today_steps') * box.get('steps_length'))/ 1000;
       }
     });
 
     box.put('date',date_once);
-  }
 
+    ///Further testing required
+    // Insert steps into the database and refresh the chart data
+    // insert_toDb().then((_) {
+    //   fetchWeeklyStepsData();
+    // });
+  }
 
   void onStepCountError(error) {
     print('onStepCountError: $error');
@@ -643,7 +701,7 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver{
 
   // Platform messages are asynchronous, so we initialize in an async method.
   Future<void> initConnectivity() async {
-    late ConnectivityResult result;
+    late List<ConnectivityResult> result;
     try {
       result = await connectivity.checkConnectivity();
     } on PlatformException catch (e) {
@@ -662,23 +720,18 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver{
   }
 
   //Function for checking the availability of the internet
-  Future<void> updateConnectionStatus(ConnectivityResult result) async {
-    hasInternet = await InternetConnectionChecker().hasConnection;
+  Future<void> updateConnectionStatus(List<ConnectivityResult> result) async {
+    hasInternet = await InternetConnection().hasInternetAccess;
     setState(() {
       connectionStatus = result;
 
-      if((connectionStatus == ConnectivityResult.mobile || connectionStatus == ConnectivityResult.wifi) && hasInternet == true){
+      if((connectionStatus.contains(ConnectivityResult.mobile) == true || connectionStatus.contains(ConnectivityResult.wifi) == true) && hasInternet == true){
         print('Exei sundesi sto internet');
 
         update_altitude();
         update_daily_steps();
         update_coor();
         update_sensors();
-        // update_pressure();
-        // update_acc();
-        // update_gyro();
-        // update_magn();
-        // update_prox();
       }
       else{
         print('Den exei sundesi sto internet');
@@ -686,7 +739,7 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver{
     });
   }
 
-  //update_altitude for updating the ununpdated altitude field from the local db
+  //update_altitude for updating the unupdated altitude field from the local db
   update_altitude() async{
     //load altitude from local db to a list map and then to a list of objects
     List<Map> alt = await SqlDatabase.instance.select_altitude_unupdated();
@@ -706,130 +759,8 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver{
     print('Status code: ${response.statusCode}');
     print('Response body: ${response.body}');
     print('Reason phrase: ${response.reasonPhrase}, altitude is uploaded');
-    // if(response.statusCode == 200){
-    //   print('OK');
-    // }
   }
 
-  // //update_pressure for updating the ununpdated pressure fields from the local db
-  // update_pressure() async{
-  //   //load pressure from local db to a list map and then to a list of objects
-  //   List<Map> press = await SqlDatabase.instance.select_pressure_unupdated();
-  //   List<Object> arr = List<Map>.from(press);
-  //
-  //   var response = await http.post(Uri.parse('https://api.sodasense.uop.gr/v1/environmentalData'),
-  //       headers:{
-  //         'Authorization':'Bearer ' + box.get('access_token'),
-  //         HttpHeaders.acceptHeader: 'application/json',
-  //         HttpHeaders.contentTypeHeader: 'application/json'
-  //       },
-  //       body: jsonEncode({
-  //         "userId": box.get('userid'),
-  //         "pressure": arr
-  //       }));
-  //   print('Status code: ${response.statusCode}');
-  //   print('Response body: ${response.body}');
-  //   print('Reason phrase: ${response.reasonPhrase}, pressure is uploaded');
-  //   // if(response.statusCode == 200){
-  //   //   print('OK');
-  //   // }
-  // }
-
-  // //update_acc for updating the ununpdated accelaration fields from the local db
-  // update_acc() async{
-  //   //load accelaration from local db to a list map and then to a list of objects
-  //   List<Map> acc = await SqlDatabase.instance.select_acc_unupdated();
-  //   List<Object> arr = List<Map>.from(acc);
-  //
-  //   var response = await http.post(Uri.parse('https://api.sodasense.uop.gr/v1/accelerationData'),
-  //       headers:{
-  //         'Authorization':'Bearer ' + box.get('access_token'),
-  //         HttpHeaders.acceptHeader: 'application/json',
-  //         HttpHeaders.contentTypeHeader: 'application/json'
-  //       },
-  //       body: jsonEncode({
-  //         "userId": box.get('userid'),
-  //         "accelaration": arr
-  //       }));
-  //   print('Status code: ${response.statusCode}');
-  //   print('Response body: ${response.body}');
-  //   print('Reason phrase: ${response.reasonPhrase}, acceleration is uploaded');
-  //   // if(response.statusCode == 200){
-  //   //   print('OK');
-  //   // }
-  // }
-
-  // //update_gyro for updating the ununpdated gyroscope fields from the local db
-  // update_gyro() async{
-  //   //load gyroscope from local db to a list map and then to a list of objects
-  //   List<Map> gyro = await SqlDatabase.instance.select_gyro_unupdated();
-  //   List<Object> arr = List<Map>.from(gyro);
-  //
-  //   var response = await http.post(Uri.parse('https://api.sodasense.uop.gr/v1/gyroscopeData'),
-  //       headers:{
-  //         'Authorization':'Bearer ' + box.get('access_token'),
-  //         HttpHeaders.acceptHeader: 'application/json',
-  //         HttpHeaders.contentTypeHeader: 'application/json'
-  //       },
-  //       body: jsonEncode({
-  //         "userId": box.get('userid'),
-  //         "gyroscope": arr
-  //       }));
-  //   print('Status code: ${response.statusCode}');
-  //   print('Response body: ${response.body}');
-  //   print('Reason phrase: ${response.reasonPhrase}, gyroscope is uploaded');
-  //   // if(response.statusCode == 200){
-  //   //   print('OK');
-  //   // }
-  // }
-
-  // //update_magn for updating the ununpdated magnometer fields from the local db
-  // update_magn() async{
-  //   //load magnetometer from local db to a list map and then to a list of objects
-  //   List<Map> magn = await SqlDatabase.instance.select_magn_unupdated();
-  //   List<Object> arr = List<Map>.from(magn);
-  //
-  //   var response = await http.post(Uri.parse('https://api.sodasense.uop.gr/v1/magnetometerData'),
-  //       headers:{
-  //         'Authorization':'Bearer ' + box.get('access_token'),
-  //         HttpHeaders.acceptHeader: 'application/json',
-  //         HttpHeaders.contentTypeHeader: 'application/json'
-  //       },
-  //       body: jsonEncode({
-  //         "userId": box.get('userid'),
-  //         "magnetometer": arr
-  //       }));
-  //   print('Status code: ${response.statusCode}');
-  //   print('Response body: ${response.body}');
-  //   print('Reason phrase: ${response.reasonPhrase}, magnetometer is uploaded');
-  //   // if(response.statusCode == 200){
-  //   //   print('OK');
-  //   // }
-  // }
-
-  // //update_prox for updating the ununpdated proximity fields from the local db
-  // update_prox() async{
-  //   //load proximity from local db to a list map and then to a list of objects
-  //   List<Map> prox = await SqlDatabase.instance.select_prox_unupdated();
-  //   List<Object> arr = List<Map>.from(prox);
-  //
-  //   var response = await http.post(Uri.parse('https://api.sodasense.uop.gr/v1/proximityData'),
-  //       headers:{
-  //         'Authorization':'Bearer ' + box.get('access_token'),
-  //         HttpHeaders.acceptHeader: 'application/json',
-  //         HttpHeaders.contentTypeHeader: 'application/json'
-  //       },
-  //       body: jsonEncode({
-  //         "userId": box.get('userid'),
-  //         "proximity": arr
-  //       }));
-  //   print('Status code: ${response.statusCode}');
-  //   print('Response body: ${response.body}');
-  //   print('Reason phrase: ${response.reasonPhrase}, proximity is uploaded');
-  //   // if(response.statusCode == 200){
-  //   //   print('OK');
-  //   // }
-  // }
 
   //update_daily_steps for updating the ununpdated daily_steps fields from the local db
   update_daily_steps() async{
@@ -856,7 +787,7 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver{
     // }
   }
 
-  //update_coor for updating the ununpdated coordinates fields from the local db
+  //update_coor for updating the unupdated coordinates fields from the local db
   update_coor() async{
     //load coordinates from local db to a list map and then to a list of objects
     List<Map> coor = await SqlDatabase.instance.select_coor_unupdated();
@@ -876,12 +807,9 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver{
     print('Status code: ${response.statusCode}');
     print('Response body: ${response.body}');
     print('Reason phrase: ${response.reasonPhrase}, coordinates is uploaded');
-    // if(response.statusCode == 200){
-    //   print('OK');
-    // }
   }
 
-  //update_sensors for updating the ununpdated sensors fields from the local db
+  //update_sensors for updating the unupdated sensors fields from the local db
   update_sensors() async{
     //load sensors from local db to a list map and then to a list of objects
     List<Map> sensors = await SqlDatabase.instance.select_sensors_unupdated();
@@ -906,7 +834,7 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver{
     // }
   }
 
-  //Future for gettind data from proximity sensor
+  //Future for getting data from proximity sensor
   Future<void> listenSensor() async {
     FlutterError.onError = (FlutterErrorDetails details) {
       if (foundation.kDebugMode) {
@@ -1001,40 +929,40 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver{
     }
   }
 
-  //function for inserting to the database the pressure data
-  void insert_pressure_toDb() async{
-    date = DateTime.now().millisecondsSinceEpoch;
-    await SqlDatabase.instance.insert_pressure(date,pressure!,0);
-    //print('KOMPLE TO PRESS');
-  }
-
-  //function for inserting to the database the acceleration data
-  void insert_acc_toDb() async{
-    date = DateTime.now().millisecondsSinceEpoch;
-    await SqlDatabase.instance.insert_acc(date, ax!, ay!, az!, 0);
-    //print('KOMPLE TO ACC');
-  }
-
-  //function for inserting to the database the gyroscope data
-  void insert_gyro_toDb() async{
-    date = DateTime.now().millisecondsSinceEpoch;
-    await SqlDatabase.instance.insert_gyro(date, gx!, gy!, gz!, 0);
-    //print('KOMPLE TO GYRO');
-  }
-
-  //function for inserting to the database the magnetometer data
-  void insert_magn_toDb() async{
-    date = DateTime.now().millisecondsSinceEpoch;
-    await SqlDatabase.instance.insert_magn(date,mx!,my!,mz!,0);
-    //print('KOMPLE TO MAGN');
-  }
-
-  //function for inserting to the database the proximity data
-  void insert_prox_toDb() async{
-    date = DateTime.now().millisecondsSinceEpoch;
-    await SqlDatabase.instance.insert_prox(date, "$nmsg", 0);
-    //print('KOMPLE TO PROX');
-  }
+  // //function for inserting to the database the pressure data
+  // void insert_pressure_toDb() async{
+  //   date = DateTime.now().millisecondsSinceEpoch;
+  //   await SqlDatabase.instance.insert_pressure(date,pressure!,0);
+  //   //print('KOMPLE TO PRESS');
+  // }
+  //
+  // //function for inserting to the database the acceleration data
+  // void insert_acc_toDb() async{
+  //   date = DateTime.now().millisecondsSinceEpoch;
+  //   await SqlDatabase.instance.insert_acc(date, ax!, ay!, az!, 0);
+  //   //print('KOMPLE TO ACC');
+  // }
+  //
+  // //function for inserting to the database the gyroscope data
+  // void insert_gyro_toDb() async{
+  //   date = DateTime.now().millisecondsSinceEpoch;
+  //   await SqlDatabase.instance.insert_gyro(date, gx!, gy!, gz!, 0);
+  //   //print('KOMPLE TO GYRO');
+  // }
+  //
+  // //function for inserting to the database the magnetometer data
+  // void insert_magn_toDb() async{
+  //   date = DateTime.now().millisecondsSinceEpoch;
+  //   await SqlDatabase.instance.insert_magn(date,mx!,my!,mz!,0);
+  //   //print('KOMPLE TO MAGN');
+  // }
+  //
+  // //function for inserting to the database the proximity data
+  // void insert_prox_toDb() async{
+  //   date = DateTime.now().millisecondsSinceEpoch;
+  //   await SqlDatabase.instance.insert_prox(date, "$nmsg", 0);
+  //   //print('KOMPLE TO PROX');
+  // }
 
   //function for inserting to the database the sensors data
   void insert_sensors_toDb() async{
@@ -1066,10 +994,10 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver{
 
     serviceEnabled = await geo.Geolocator.isLocationServiceEnabled();
 
-    return await geo.Geolocator.getCurrentPosition(desiredAccuracy: geo.LocationAccuracy.best);
+    return await geo.Geolocator.getCurrentPosition(desiredAccuracy: geo.LocationAccuracy.bestForNavigation);
   }
 
-  //setpoint for saving the coordinatesas lat and lng
+  //setpoint for saving the coordinates lat and lng
   void setpoint(latitude,longitude) async{
     serviceEnabled = await geo.Geolocator.isLocationServiceEnabled();
 
@@ -1077,13 +1005,12 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver{
     lng=longitude;
   }
 
-  //Function for inserting GPS coodinates to sql db
+  //Function for inserting GPS coordinates to sql db
   void insert_toDb_GPS() async{
     if(lat!=0.0 && lng!=0.0){
       date = DateTime.now().millisecondsSinceEpoch;
       await SqlDatabase.instance.insert_coor(date,lat,lng,0);
     }
-    // print('has inserted somethinggggggggggggggggg');
   }
 
   //getCoordinates for getting the coordinates points from the first date picker
@@ -1132,47 +1059,90 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver{
       }
     });
 
-    generateData();
+    generateData(arr);
   }
 
-  void generateData() {
+  // Method to correctly determine the step count for each day
+  void generateData(Map<String, int> weeklySteps) {
     DateTime currentDate = DateTime.now();
     DateTime startOfWeek = currentDate.subtract(Duration(days: currentDate.weekday - 1));
     DateTime endOfWeek = startOfWeek.add(Duration(days: 7)); // changed from 6 to 7
 
     List<ChartData> generatedData = [];
+    int maxSteps = 0;
 
     for (int i = 0; i < 7; i++) {
       DateTime date = startOfWeek.add(Duration(days: i));
       String dayOfWeek = DateFormat('EEE').format(date); // Three-letter day abbreviation
       String formattedDate = DateFormat('dd/MM').format(date); // dd/mm format
-      generatedData.add(ChartData('$dayOfWeek\n$formattedDate', getStepCountForDate(date)));
+
+      // Check if the date falls within the current week
+      if (date.isAfter(startOfWeek.subtract(Duration(days: 1))) && date.isBefore(startOfWeek.add(Duration(days: 7)))) {
+        int stepsForDay = weeklySteps[dayOfWeek] ?? 0; // Use 0 if no data for the day
+        maxSteps = max(maxSteps, stepsForDay); // Update maxSteps
+        generatedData.add(ChartData('$dayOfWeek\n$formattedDate', stepsForDay));
+        print("Processed data - Day: $dayOfWeek, Formatted Date: $formattedDate, Steps: $stepsForDay"); // Logging
+      } else {
+        print("Date out of range - Day: $dayOfWeek, Formatted Date: $formattedDate"); // Logging
+      }
     }
 
-    data = generatedData;
+    setState(() {
+      data = generatedData;
+      updateGraphMaxValue(maxSteps + 100);
+    });
   }
 
-  int getStepCountForDate(DateTime date) {
-    // Replace this with your logic to get step count for the given date
-    // For example, you could use a map or database to store step data
-    // and retrieve it based on the date.
-    String dayOfWeekfullname = DateFormat('EEEE').format(date);
-    //Monday = 50; // android studio emulator test
-    //Tuesday = 30;
-    Map<String, int> dayToStepMap = {
-      'Monday': Monday,
-      'Tuesday': Tuesday,
-      'Wednesday': Wednesday,
-      'Thursday': Thursday,
-      'Friday': Friday,
-      'Saturday': Saturday,
-      'Sunday': Sunday,
-    };
+  // Helper method to validate if a date is within the current week
+  bool isDateInCurrentWeek(DateTime date) {
+    DateTime now = DateTime.now();
+    DateTime startOfWeek = now.subtract(Duration(days: now.weekday - 1));
+    DateTime endOfWeek = startOfWeek.add(Duration(days: 6));
+    return date.isAfter(startOfWeek.subtract(Duration(days: 1))) && date.isBefore(endOfWeek.add(Duration(days: 1)));
+  }
 
-    int daysteps = dayToStepMap[dayOfWeekfullname] ?? 0;
-    print('Ta vimata pare $Monday, $Tuesday, $Wednesday, $Thursday, $Friday, $Saturday, $Sunday');
+  // New method to update the maximum value on the graph
+  void updateGraphMaxValue(int newMaxValue) {
+    setState(() {
+      maxYAxisValue = newMaxValue;
+    });
+  }
 
-    return daysteps;
+  ///Further testing required
+  Future<int> getStepCountForDate(DateTime date) async{
+    // // Replace this with your logic to get step count for the given date
+    // // For example, you could use a map or database to store step data
+    // // and retrieve it based on the date.
+    // String dayOfWeekfullname = DateFormat('EEEE').format(date);
+    // //Monday = 50; // android studio emulator test
+    // //Tuesday = 30;
+    // Map<String, int> dayToStepMap = {
+    //   'Monday': Monday,
+    //   'Tuesday': Tuesday,
+    //   'Wednesday': Wednesday,
+    //   'Thursday': Thursday,
+    //   'Friday': Friday,
+    //   'Saturday': Saturday,
+    //   'Sunday': Sunday,
+    // };
+    //
+    // int daysteps = dayToStepMap[dayOfWeekfullname] ?? 0;
+    // print('Ta vimata pare $Monday, $Tuesday, $Wednesday, $Thursday, $Friday, $Saturday, $Sunday');
+    //
+    // return daysteps;
+
+    // Convert the date to the start of the day in milliseconds
+    final startOfDay = DateTime(date.year, date.month, date.day).millisecondsSinceEpoch;
+    final endOfDay = DateTime(date.year, date.month, date.day, 23, 59, 59).millisecondsSinceEpoch;
+
+    // Fetch step count from the database for the specific date
+    List<Map<String, dynamic>> stepsData = await SqlDatabase.instance.select_steps_for_date_range(startOfDay, endOfDay);
+
+    if (stepsData.isNotEmpty && stepsData[0]['steps'] != null) {
+      return stepsData[0]['steps'] ?? 0;
+    } else {
+      return 0;
+    }
   }
 
   @override
@@ -1242,10 +1212,10 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver{
                             borderRadius: BorderRadius.circular(40),
                           ),
                           child: CarouselSlider(
-                            carouselController: CarouselController(),
+                            carouselController: CarouselSliderController(),
                             options: CarouselOptions(
                               reverse: true,
-                              height: 300,
+                              height: MediaQuery.of(context).size.height * 0.4,
                               scrollDirection: Axis.horizontal,
                               enlargeCenterPage: true,
                               enlargeStrategy: CenterPageEnlargeStrategy.height,
@@ -1256,53 +1226,48 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver{
                               disableCenter: true,
                             ),
                             items: [
-                              Container(
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  mainAxisSize: MainAxisSize.max,
-                                  children: <Widget>[
-                                    Center(
-                                        child: Container(
-                                            child: SfCartesianChart(
-                                              primaryXAxis: CategoryAxis(
-                                                majorGridLines: MajorGridLines(color: Colors.transparent),
-                                                labelIntersectAction: AxisLabelIntersectAction.rotate45,
-                                                labelStyle: TextStyle(
-                                                  color: Colors.black,
-                                                  fontSize: 14,
-                                                ),
-                                              ),
-                                              primaryYAxis: NumericAxis(
-                                                minimum: 0,
-                                                maximum: box.get('target_steps').toDouble() + 100,
-                                                interval: box.get('target_steps').toDouble()/10,
-                                                majorGridLines: MajorGridLines(color: Colors.transparent), // Hide minor tick lines
-                                                labelIntersectAction: AxisLabelIntersectAction.rotate45,
-                                                labelStyle: TextStyle(
-                                                  color: Colors.black,
-                                                  fontSize: 10,
-                                                ),
-                                              ),
-                                              tooltipBehavior: _tooltip,
-                                              series: <ChartSeries<ChartData, String>>[
-                                                ColumnSeries<ChartData, String>(
-                                                  dataSource: data,
-                                                  xValueMapper: (ChartData data, _) => data.x,
-                                                  yValueMapper: (ChartData data, _) => data.y,
-                                                  name: 'Steps',
-                                                  color:Colors.cyan,
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                mainAxisSize: MainAxisSize.max,
+                                children: <Widget>[
+                                  Center(
+                                      child: SfCartesianChart(
+                                        primaryXAxis: CategoryAxis(
+                                          majorGridLines: MajorGridLines(color: Colors.transparent),
+                                          labelIntersectAction: AxisLabelIntersectAction.rotate45,
+                                          labelStyle: TextStyle(
+                                            color: Colors.black,
+                                            fontSize: 14,
+                                          ),
+                                        ),
+                                        primaryYAxis: NumericAxis(
+                                          minimum: 0,
+                                          maximum: maxYAxisValue.toDouble(),
+                                          interval: maxYAxisValue / 10,
+                                          majorGridLines: MajorGridLines(color: Colors.transparent), // Hide minor tick lines
+                                          labelIntersectAction: AxisLabelIntersectAction.rotate45,
+                                          labelStyle: TextStyle(
+                                            color: Colors.black,
+                                            fontSize: 10,
+                                          ),
+                                        ),
+                                        tooltipBehavior: _tooltip,
+                                        series: <ColumnSeries<ChartData, String>>[
+                                          ColumnSeries<ChartData, String>(
+                                            dataSource: data,
+                                            xValueMapper: (ChartData data, _) => data.x,
+                                            yValueMapper: (ChartData data, _) => data.y,
+                                            name: 'Steps',
+                                            color:Colors.cyan,
+                                          ),
 
-                                                ),
-
-                                              ],
-                                            )
-                                        )
-                                    )
-                                  ],
-                                ),
+                                        ],
+                                      )
+                                  )
+                                ],
                               ),
                               Container(
-                                width: double.maxFinite,
+                                width: MediaQuery.of(context).size.width,
                                 margin: EdgeInsets.symmetric(horizontal: 20),
                                 decoration: BoxDecoration(
                                   gradient: LinearGradient(
@@ -1312,184 +1277,191 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver{
                                   ),
                                 ),
                                 padding: EdgeInsets.all(16),
-                                child: Column(
-                                  children: [
-                                    Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                      // crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Column(
-                                          children: [
-                                            RichText(
-                                              text: TextSpan(
-                                                  children: [
-                                                    TextSpan(
-                                                        text: 'Today',
-                                                        style: TextStyle(
-                                                            fontWeight: FontWeight.bold,
-                                                            color: Colors.black,
-                                                            fontSize: 26
-                                                        )
-                                                    ),
-                                                  ]
-                                              ),
-                                            )
-                                          ],
-                                        ),
-                                        Column(
-                                          children: [
-                                            IconButton(
-                                              onPressed: () => {
-                                                showDialog(context: context, builder: (context) => StatefulBuilder(
-                                                    builder: (BuildContext context, StateSetter setState) {
-                                                      return AlertDialog(
-                                                        title: Text('Set your daily target\nor change your height',
-                                                            textAlign: TextAlign.justify
-                                                        ),
-                                                        content: SizedBox(
-                                                          child: Column(
-                                                            mainAxisSize: MainAxisSize.min,
-                                                            children: [
-                                                              TextField(
-                                                                maxLength: 5,
-                                                                controller: stepController,
-                                                                keyboardType: TextInputType.number,
-                                                                decoration: InputDecoration(
-                                                                    labelText: "Steps Target",
-                                                                    counterText: '',
-                                                                    hintText: box.get('target_steps') == null ? "" : "${box.get('target_steps')}"
-                                                                ),
-                                                              ),
-                                                              TextField(
-                                                                maxLength: 3,
-                                                                controller: heightController,
-                                                                decoration: InputDecoration(
-                                                                    labelText: "Height in cm",
-                                                                    errorText: height_validate ? null: Height_Textfield_check(),
-                                                                    counterText: '',
-                                                                    hintText: box.get('height') == null ? "" : "${box.get('height')}"
-                                                                ),
-                                                                keyboardType: TextInputType.number,
-                                                                onChanged: (text) => setState(() {
-                                                                  height_validate = height_error_msg();
-                                                                }),
-                                                              ),
-                                                            ],
-                                                          ),
-                                                        ),
-                                                        actions: [
-                                                          ElevatedButton(onPressed: () => {
-                                                            if(stepController.text.isEmpty == false && heightController.text.isEmpty == false && int.parse(heightController.text) <= 250){
-                                                              if(isSelected[0]==true){
-                                                                height = int.parse(heightController.text),
-                                                                steps_length = (height * 0.415) / 100,// /100 to make it in meters
-                                                                print('male')
-                                                              }
-                                                              else{
-                                                                height = int.parse(heightController.text),
-                                                                steps_length = (height * 0.413) / 100,// /100 to make it in meters
-                                                                print('female')
-                                                              },
-                                                              steps_target = int.parse(stepController.text),
-                                                              user.steps_length = steps_length,
-                                                              user.height = height,
-                                                              user.target_steps = steps_target,
-                                                              box.put('height',user.height),
-                                                              box.put('steps_length',user.steps_length),
-                                                              box.put('target_steps',user.target_steps),
-                                                              // user?.save(),
-                                                              stepController.clear(),
-                                                              heightController.clear(),
-                                                              Navigator.pop(context,steps_target),
-                                                            }
-                                                          },child: Text('Ok')),
-                                                        ],
-                                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.0)),
-
-                                                      );
-                                                    }
+                                child: SingleChildScrollView(
+                                  child: Column(
+                                    children: [
+                                      Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        // crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Column(
+                                            children: [
+                                              RichText(
+                                                text: TextSpan(
+                                                    children: [
+                                                      TextSpan(
+                                                          text: 'Today',
+                                                          style: TextStyle(
+                                                              fontWeight: FontWeight.bold,
+                                                              color: Colors.black,
+                                                              fontSize: 26
+                                                          )
+                                                      ),
+                                                    ]
                                                 ),
-                                                )
-                                              },
-                                              icon: FaIcon(FontAwesomeIcons.bullseye),
-                                              color: isDarkMode == true ? Colors.black: Colors.black,
-                                            )
-                                          ],
-                                        )
-                                      ],
-                                    ),
+                                              )
+                                            ],
+                                          ),
+                                          Column(
+                                            children: [
+                                              IconButton(
+                                                onPressed: () => {
+                                                  showDialog(context: context, builder: (context) => StatefulBuilder(
+                                                      builder: (BuildContext context, StateSetter setState) {
+                                                        return AlertDialog(
+                                                          title: Text('Set your daily target\nor change your height',
+                                                              textAlign: TextAlign.justify
+                                                          ),
+                                                          content: SizedBox(
+                                                            child: Column(
+                                                              mainAxisSize: MainAxisSize.min,
+                                                              children: [
+                                                                TextField(
+                                                                  maxLength: 5,
+                                                                  controller: stepController,
+                                                                  keyboardType: TextInputType.number,
+                                                                  decoration: InputDecoration(
+                                                                      labelText: "Steps Target",
+                                                                      counterText: '',
+                                                                      hintText: box.get('target_steps') == null ? "" : "${box.get('target_steps')}"
+                                                                  ),
+                                                                ),
 
-                                    SizedBox(height: size.height * 0.03),
+                                                                SizedBox(height: 8),
 
-                                    Row(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: <Widget>[
-                                        Center(
-                                          child: Container(
-                                              height: 160,
-                                              width: 160,
-                                              child: Stack(
-                                                fit: StackFit.expand,
-                                                children: [
-                                                  LiquidCircularProgressIndicator(
-                                                      value:steps=='0' && box.get('today_steps') != null ? box.get('today_steps')/box.get('target_steps') : 0,
-                                                      backgroundColor: Color(0xfff8f9f9),
-                                                      direction: Axis.vertical
-                                                  ),
-                                                  Center(
-                                                    child: RichText(
-                                                      text: TextSpan(
-                                                          children: [
-                                                            TextSpan(
-                                                                text: steps=='0' && box.get('today_steps') != null ? '${box.get('today_steps')}/${box.get('target_steps')}' : '${steps}/${box.get('target_steps')}',
-                                                                style: TextStyle(
-                                                                  color: Colors.black,
-                                                                  fontWeight: FontWeight.bold,
-                                                                )
+                                                                TextField(
+                                                                  maxLength: 3,
+                                                                  controller: heightController,
+                                                                  decoration: InputDecoration(
+                                                                      labelText: "Height in cm",
+                                                                      errorText: height_validate ? null: Height_Textfield_check(),
+                                                                      counterText: '',
+                                                                      hintText: box.get('height') == null ? "" : "${box.get('height')}"
+                                                                  ),
+                                                                  keyboardType: TextInputType.number,
+                                                                  onChanged: (text) => setState(() {
+                                                                    height_validate = height_error_msg();
+                                                                  }),
+                                                                ),
+                                                              ],
                                                             ),
-                                                            WidgetSpan(
-                                                                child: RotatedBox(
-                                                                    quarterTurns: 3,
-                                                                    child: FaIcon(FontAwesomeIcons.shoePrints, size: 12,color: isDarkMode == true ? Colors.black: Colors.black,)
-                                                                )
-                                                            )
-                                                          ]
+                                                          ),
+                                                          actions: [
+                                                            ElevatedButton(
+                                                                onPressed: (){
+                                                                  Navigator.pop(context);
+                                                                },
+                                                                child: Text('Cancel')
+                                                            ),
+                                                            ElevatedButton(onPressed: () => {
+                                                              if(stepController.text.isEmpty == false && heightController.text.isEmpty == false && int.parse(heightController.text) <= 250){
+                                                                if(isSelected[0]==true){
+                                                                  height = int.parse(heightController.text),
+                                                                  steps_length = (height * 0.415) / 100,// /100 to make it in meters
+                                                                  print('male')
+                                                                }
+                                                                else{
+                                                                  height = int.parse(heightController.text),
+                                                                  steps_length = (height * 0.413) / 100,// /100 to make it in meters
+                                                                  print('female')
+                                                                },
+                                                                steps_target = int.parse(stepController.text),
+                                                                box.put('height',height),
+                                                                box.put('steps_length',steps_length),
+                                                                box.put('target_steps',steps_target),
+                                                                stepController.clear(),
+                                                                heightController.clear(),
+                                                                Navigator.pop(context,steps_target),
+                                                              }
+                                                            },child: Text('Ok')),
+                                                          ],
+                                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.0)),
+
+                                                        );
+                                                      }
+                                                  ),
+                                                  )
+                                                },
+                                                icon: FaIcon(FontAwesomeIcons.bullseye),
+                                                color: isDarkMode == true ? Colors.black: Colors.black,
+                                              )
+                                            ],
+                                          )
+                                        ],
+                                      ),
+
+                                      SizedBox(height: size.height * 0.03),
+
+                                      Row(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: <Widget>[
+                                          Center(
+                                            child: Container(
+                                                height: 130,
+                                                width: 160,
+                                                child: Stack(
+                                                  fit: StackFit.expand,
+                                                  children: [
+                                                    FittedBox(
+                                                      fit: BoxFit.fitWidth,
+                                                      child: LiquidCircularProgressIndicator(
+                                                          value:steps=='0' && box.get('today_steps') != null ? box.get('today_steps')/box.get('target_steps') : 0,
+                                                          backgroundColor: Color(0xfff8f9f9),
+                                                          direction: Axis.vertical
                                                       ),
                                                     ),
-                                                  )
-                                                ],
-                                              )
+                                                    Center(
+                                                      child: RichText(
+                                                        text: TextSpan(
+                                                            children: [
+                                                              TextSpan(
+                                                                  text: steps=='0' && box.get('today_steps') != null ? '${box.get('today_steps')}/${box.get('target_steps')}' : '${steps}/${box.get('target_steps')}',
+                                                                  style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)
+                                                              ),
+                                                              WidgetSpan(
+                                                                  child: RotatedBox(
+                                                                      quarterTurns: 3,
+                                                                      child: FaIcon(FontAwesomeIcons.shoePrints, size: 12,color: isDarkMode == true ? Colors.black: Colors.black,)
+                                                                  )
+                                                              )
+                                                            ]
+                                                        ),
+                                                      ),
+                                                    )
+                                                  ],
+                                                )
+                                            ),
                                           ),
-                                        ),
-                                      ],
-                                    ),
+                                        ],
+                                      ),
 
-                                    SizedBox(height: size.height * 0.03),
+                                      SizedBox(height: size.height * 0.03),
 
-                                    Row(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: [
-                                        Text('$dist',
-                                          style: TextStyle(
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 14
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    Row(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: [
-                                        Text('Km by steps',
+                                      Row(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Text('$dist',
                                             style: TextStyle(
-                                              //fontWeight: FontWeight.bold,
-                                                color: Colors.black,
+                                                fontWeight: FontWeight.bold,
                                                 fontSize: 14
-                                            )
-                                        )
-                                      ],
-                                    ),
-                                  ],
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      Row(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Text('Km by steps',
+                                              style: TextStyle(
+                                                //fontWeight: FontWeight.bold,
+                                                  color: Colors.black,
+                                                  fontSize: 14
+                                              )
+                                          )
+                                        ],
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
                             ],
@@ -1521,8 +1493,8 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver{
                         children: [
                           ElevatedButton(
                             style: ElevatedButton.styleFrom(
-                              minimumSize: const Size(125,35),
-                              maximumSize: const Size(125,35),
+                              minimumSize: Size(MediaQuery.of(context).size.width * 0.4, 50),
+                              maximumSize: Size(MediaQuery.of(context).size.width * 0.4, 50),
                             ),
                             onPressed:() => {
                               Navigator.push(context, MaterialPageRoute(builder: (context) => Navigation()))
@@ -1553,8 +1525,8 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver{
                         children: [
                           ElevatedButton(
                             style: ElevatedButton.styleFrom(
-                              minimumSize: const Size(125,35),
-                              maximumSize: const Size(125,35),
+                              minimumSize: Size(MediaQuery.of(context).size.width * 0.4, 50),
+                              maximumSize: Size(MediaQuery.of(context).size.width * 0.4, 50),
                             ),
                             onPressed:() => {
                               Navigator.push(context, MaterialPageRoute(builder: (context) => Compass()))
@@ -1588,8 +1560,8 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver{
                           children: [
                             ElevatedButton(
                               style: ElevatedButton.styleFrom(
-                                minimumSize: const Size(125,35),
-                                maximumSize: const Size(125,35),
+                                minimumSize: Size(MediaQuery.of(context).size.width * 0.4, 50),
+                                maximumSize: Size(MediaQuery.of(context).size.width * 0.4, 50),
                               ),
                               onPressed:() => {
                                 Navigator.push(context, MaterialPageRoute(builder: (context) => sens.Sensors()))
@@ -1616,8 +1588,8 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver{
                         children: [
                           ElevatedButton(
                             style: ElevatedButton.styleFrom(
-                              minimumSize: const Size(125,35),
-                              maximumSize: const Size(125,35),
+                              minimumSize: Size(MediaQuery.of(context).size.width * 0.4, 50),
+                              maximumSize: Size(MediaQuery.of(context).size.width * 0.4, 50),
                             ),
                             onPressed: () => {
                               Navigator.push(context, MaterialPageRoute(builder: (context) => Settings()))
@@ -1651,8 +1623,8 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver{
                           children: [
                             ElevatedButton(
                               style: ElevatedButton.styleFrom(
-                                minimumSize: const Size(125,35),
-                                maximumSize: const Size(125,35),
+                                minimumSize: Size(MediaQuery.of(context).size.width * 0.4, 50),
+                                maximumSize: Size(MediaQuery.of(context).size.width * 0.4, 50),
                               ),
                               onPressed:() => {
                                 showDialog(context: context, builder: (context) => AlertDialog(
@@ -1742,6 +1714,9 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver{
                               ),
                               textAlign: TextAlign.justify,
                             ),
+
+                            SizedBox(height: 16),
+
                             TextField(
                               maxLength: 5,
                               controller: stepController,
@@ -1751,6 +1726,9 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver{
                               ),
                               keyboardType: TextInputType.number,
                             ),
+
+                            SizedBox(height: 16),
+
                             TextField(
                               maxLength: 3,
                               controller: heightController,
@@ -1764,7 +1742,9 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver{
                                 height_validate = height_error_msg();
                               }),
                             ),
+
                             SizedBox(height: 16),
+
                             ToggleButtons(
                               isSelected: isSelected,
                               borderRadius: BorderRadius.circular(30),
@@ -1780,14 +1760,12 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver{
                                   for (int i = 0; i < 2; i++) {
                                     if(i == index){
                                       isSelected[i] = true;
-                                      user.gender = 'male';
-                                      box.put('gender',user.gender);
+                                      box.put('gender','male');
                                       print(box.get('gender'));
                                     }
                                     else{
                                       isSelected[i] = false;
-                                      user.gender = 'female';
-                                      box.put('gender',user.gender);
+                                      box.put('gender','female');
                                       print(box.get('gender'));
                                     }
                                     //user.save();
@@ -1815,12 +1793,9 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver{
                             print('female')
                           },
                           steps_target = int.parse(stepController.text),
-                          user.height = height,
-                          user.steps_length = steps_length,
-                          user.target_steps = steps_target,
-                          box.put('height',user.height),
-                          box.put('steps_length',user.steps_length),
-                          box.put('target_steps',user.target_steps),
+                          box.put('height',height),
+                          box.put('steps_length',steps_length),
+                          box.put('target_steps',steps_target),
                           // user.save(),
                           stepController.clear(),
                           heightController.clear(),
@@ -1841,8 +1816,7 @@ class StartScreen extends State<MyHomePage> with WidgetsBindingObserver{
           ElevatedButton(
             child: Text('Open App Settings'),
             onPressed: () {
-              openAppSettings().then((opened) {
-              });
+              openAppSettings().then((opened) {});
             },
           )
         ],

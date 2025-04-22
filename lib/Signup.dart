@@ -2,7 +2,7 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
-import 'package:internet_connection_checker/internet_connection_checker.dart';
+import 'package:internet_connection_checker_plus/internet_connection_checker_plus.dart';
 import 'package:thesis/Login.dart';
 import 'package:thesis/main.dart';
 import 'package:email_validator/email_validator.dart';
@@ -221,16 +221,6 @@ class SignupState extends State<Signup> {
     });
   }
 
-  //Function for creating hash for the given password
-  HashPassword(String password, String salt) {
-    var codec = Utf8Codec();
-    var key = codec.encode(password);//encode password to Utf8
-    var saltBytes = codec.encode(salt);//encode salt to Utf8
-    var hmacSha256 = Hmac(sha256, key);//hashing password with sha256 cryptalgorith
-    var digest = hmacSha256.convert(saltBytes);//add salt to hashed password
-    return digest.toString();
-  }
-
   @override
   Widget build(BuildContext context) {
     Size size = MediaQuery.of(context).size;
@@ -344,32 +334,13 @@ class SignupState extends State<Signup> {
                 child: ElevatedButton(
                   onPressed: () async {
                     connectivityresult = await Connectivity().checkConnectivity();
-                    hasInternet = await InternetConnectionChecker().hasConnection;
+                    hasInternet = await InternetConnection().hasInternetAccess;
                     print(connectivityresult);
-                    if((connectivityresult == ConnectivityResult.mobile || connectivityresult == ConnectivityResult.wifi) && hasInternet == true){
+                    if((connectivityresult.contains(ConnectivityResult.mobile) == true || connectivityresult.contains(ConnectivityResult.wifi) == true) && hasInternet == true){
                       if(user_check == false || mail_check == false || pass_check == false || conf_check == false){
                         Fluttertoast.showToast(msg: 'Please check your credentials',toastLength: Toast.LENGTH_SHORT,gravity: ToastGravity.BOTTOM);
                       }
                       else{
-                        // mongo.Db db = mongo.Db('mongodb://10.0.2.2:27017/App');
-                        // await db.open();
-                        // mongo.DbCollection users = db.collection('users');
-                        // print('Connected to database!');
-                        // var rand = Random.secure();//Generate a random salt
-                        // var saltBytes = List<int>.generate(32, (_) => rand.nextInt(256));//Generates a list of 32 integers between 0 and 256
-                        // var salt = base64.encode(saltBytes);//Convertion of list to a base64 string
-                        // String hashed_pass = HashPassword(pass_txtController.text, salt);
-                        // var existing_mail = await users.findOne(mongo.where.eq('e-mail',mail_txtController.text));
-                        // if(existing_mail?.containsValue(mail_txtController.text) == true){
-                        //   Fluttertoast.showToast(msg: 'E-mail already exists, please enter another', toastLength: Toast.LENGTH_SHORT,gravity: ToastGravity.BOTTOM);
-                        // }
-                        // else{
-                        //   await users.insertOne({
-                        //     'username': user_txtController.text,
-                        //     'e-mail' : mail_txtController.text,
-                        //     'Hashed password': hashed_pass,
-                        //     'Salt':salt
-                        //   });
                           var response = await http.post(Uri.parse('https://api.sodasense.uop.gr/v1/userRegister'),
                             body: jsonEncode(<String, String>{
                               "email":mail_txtController.text,
